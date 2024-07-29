@@ -4,17 +4,17 @@ import { Show, MarkdownField } from "@refinedev/antd";
 
 import { Typography } from "antd";
 
-import type { IPost, ICategory } from "../../interfaces";
+// import type { IPost, ICategory } from "../../interfaces";
 
 const { Title, Text } = Typography;
 
-export const PostShow = () => {
+export const DriverShow = () => {
   const { queryResult } = useShow<IPost>();
   const { data, isLoading } = queryResult;
   const record = data?.data;
 
   const { data: categoryData, isLoading: categoryIsLoading } =
-    useOne<ICategory>({
+    useOne<any>({
       resource: "categories",
       id: record?.category.id || "",
       queryOptions: {

@@ -29,10 +29,12 @@ import { App as AntdApp, ConfigProvider } from "antd";
 
 import "@refinedev/antd/dist/reset.css";
 
-import { PostList, PostEdit, PostShow } from "../src/pages/posts";
+import { DriverList } from "../src/pages/drivers";
+import { SessionList, SessionShow } from "../src/pages/races";
 import { DashboardPage } from "../src/pages/dashboard";
+import DemoLine from "./pages/races/test";
 
-const API_URL = "https://api.fake-rest.refine.dev";
+const API_URL = "https://api.openf1.org/v1"
 
 /**
  *  mock auth credentials to simulate authentication
@@ -140,17 +142,17 @@ const App: React.FC = () => {
     check: async () =>
       localStorage.getItem("email")
         ? {
-            authenticated: true,
-          }
+          authenticated: true,
+        }
         : {
-            authenticated: false,
-            error: {
-              message: "Check failed",
-              name: "Not authenticated",
-            },
-            logout: true,
-            redirectTo: "/login",
+          authenticated: false,
+          error: {
+            message: "Check failed",
+            name: "Not authenticated",
           },
+          logout: true,
+          redirectTo: "/login",
+        },
     getPermissions: async (params) => params?.permissions,
     getIdentity: async () => ({
       id: 1,
@@ -180,11 +182,15 @@ const App: React.FC = () => {
                 },
               },
               {
-                name: "posts",
-                list: "/posts",
-                show: "/posts/show/:id",
-                edit: "/posts/edit/:id",
+                name: "sessions",
+                list: "/sessions",
               },
+              {
+                name: "drivers",
+                list: "/drivers",
+
+              },
+
             ]}
             notificationProvider={useNotificationProvider}
             options={{
@@ -206,12 +212,16 @@ const App: React.FC = () => {
                 }
               >
                 <Route index element={<DashboardPage />} />
-
-                <Route path="/posts">
-                  <Route index element={<PostList />} />
-                  <Route path="edit/:id" element={<PostEdit />} />
-                  <Route path="show/:id" element={<PostShow />} />
+                <Route path="/sessions">
+                  <Route index element={<SessionList />} />
+                  <Route path="show/:session_key" element={<SessionShow />} />
+                  <Route path="test" element={<DemoLine />} />
                 </Route>
+
+                <Route path="/drivers">
+                  <Route index element={<DriverList />} />
+                </Route>
+
               </Route>
 
               <Route
