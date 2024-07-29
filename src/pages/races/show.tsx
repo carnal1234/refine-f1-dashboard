@@ -2,6 +2,8 @@ import { useCustom, useApiUrl } from "@refinedev/core";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Flex, Spin } from "antd";
 
+import { ListItem } from "@antv/component/lib/types"
+
 
 
 import { Show, MarkdownField } from "@refinedev/antd";
@@ -17,7 +19,7 @@ import { Line, LineConfig, Bar, BarConfig } from '@ant-design/plots'
 
 
 
-import { ILap } from "../../interfaces";
+import { IDriver, ILap, ISession, IStint } from "../../interfaces";
 import { useEffect, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
@@ -25,28 +27,30 @@ import { Text as CustomText } from "../../components/common";
 
 const { Title, Text } = Typography;
 
+interface CustomMap {
+    [key: string]: string | undefined
+}
 
 
-
-export const SessionShow: React.FC = () => {
+export const SessionShow = () => {
     const apiUrl = useApiUrl();
 
 
     const { session_key } = useParams();
 
-    const [driverData, setDriverData] = useState([]);
-    const [sessionData, setSessionData] = useState([]);
-    const [lapData, setLapData] = useState([]);
-    const [stintData, setStintData] = useState([]);
+    const [driverData, setDriverData] = useState<Array<IDriver>>([]);
+    const [sessionData, setSessionData] = useState<Array<ISession>>([]);
+    const [lapData, setLapData] = useState<Array<ILap>>([]);
+    const [stintData, setStintData] = useState<Array<IStint>>([]);
 
     const [isLoading, setIsLoading] = useState(true);
 
 
 
-    const driverGroupByNumber = driverData.reduce((driversSoFar, { driver_number, name_acronym }) => {
+    const driverGroupByNumber = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
         let key = driver_number.toString()
-        if (!driversSoFar[key]) driversSoFar[key] = [];
-        driversSoFar[key].push(name_acronym);
+        if (!driversSoFar[key]) driversSoFar[key] = name_acronym;
+        //driversSoFar[key].push(name_acronym);
         return driversSoFar;
     }, {});
 
@@ -149,16 +153,8 @@ export const SessionShow: React.FC = () => {
         xField: 'lap_start',
         yField: 'driver_number',
         seriesField: 'compound',
-        axis: {
-            y: {
-                labelFormatter: '~s',
 
-            },
-            x: {
-                labelSpacing: 4,
-            },
-        },
-        tooltip: { items: [{ channel: 'y0', valueFormatter: '.0%' }] },
+
     };
 
     return (

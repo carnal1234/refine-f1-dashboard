@@ -10,27 +10,12 @@ import {
 
 import { Table, Space } from "antd";
 
-import type { IDriver } from "../../interfaces";
+import type { IDriver, ISession } from "../../interfaces";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 import dayjs from 'dayjs'
 
 
-type SessionType = {
-    location: string,
-    country_key: number,
-    country_code: string,
-    country_name: string,
-    circuit_key: number,
-    circuit_short_name: string,
-    session_type: string,
-    session_name: string,
-    date_start: string,
-    date_end: string,
-    gmt_offset: string,
-    session_key: number,
-    meeting_key: number,
-    year: number
-}
+
 
 
 export const SessionList = () => {
@@ -52,7 +37,7 @@ export const SessionList = () => {
     //   },
     // });
 
-    const { tableProps } = useTable<SessionType, HttpError>({
+    const { tableProps } = useTable<ISession, HttpError>({
         resource: "sessions?session_name=Race&year=2024",
         hasPagination: false,
     });
@@ -80,10 +65,10 @@ export const SessionList = () => {
 
 
 
-                <Table.Column
+                <Table.Column<ISession>
                     title="Actions"
                     dataIndex="actions"
-                    render={(_, record) => (
+                    render={(value, record) => (
                         <Space>
 
                             <ShowButton onClick={() => {
@@ -94,7 +79,7 @@ export const SessionList = () => {
                             }}
 
 
-                                hideText size="small" recordItemId={record.id} />
+                                hideText size="small" recordItemId={record.session_key} />
                         </Space>
                     )}
                 />

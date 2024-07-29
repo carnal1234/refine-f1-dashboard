@@ -32,7 +32,6 @@ import "@refinedev/antd/dist/reset.css";
 import { DriverList } from "../src/pages/drivers";
 import { SessionList, SessionShow } from "../src/pages/races";
 import { DashboardPage } from "../src/pages/dashboard";
-import DemoLine from "./pages/races/test";
 
 const API_URL = "https://api.openf1.org/v1"
 
@@ -215,7 +214,7 @@ const App: React.FC = () => {
                 <Route path="/sessions">
                   <Route index element={<SessionList />} />
                   <Route path="show/:session_key" element={<SessionShow />} />
-                  <Route path="test" element={<DemoLine />} />
+
                 </Route>
 
                 <Route path="/drivers">
