@@ -1,5 +1,4 @@
 import {
-  GitHubBanner,
   Refine,
   type AuthProvider,
   Authenticated,
@@ -163,7 +162,6 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <GitHubBanner />
       <ConfigProvider theme={RefineThemes.Blue}>
         <AntdApp>
           <Refine
@@ -181,11 +179,11 @@ const App: React.FC = () => {
                 },
               },
               {
-                name: "sessions",
+                name: "Races",
                 list: "/sessions",
               },
               {
-                name: "drivers",
+                name: "Drivers",
                 list: "/drivers",
 
               },

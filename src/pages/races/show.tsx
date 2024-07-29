@@ -2,7 +2,7 @@ import { useCustom, useApiUrl } from "@refinedev/core";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Flex, Spin } from "antd";
 
-import { ListItem } from "@antv/component/lib/types"
+import { ListItemProps } from "antd/lib/list";
 
 
 
@@ -13,7 +13,7 @@ import { Card, Typography } from "antd";
 // import type { ISession } from "../../interfaces";
 
 
-import { Line, LineConfig, Bar, BarConfig } from '@ant-design/plots'
+import { Line, LineConfig, Bar, BarConfig, ColumnConfig } from '@ant-design/plots'
 
 
 
@@ -23,6 +23,8 @@ import { IDriver, ILap, ISession, IStint } from "../../interfaces";
 import { useEffect, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
+import { Datum } from "@ant-design/charts";
+import { StintGraph } from "../../components/graph/stint";
 
 
 const { Title, Text } = Typography;
@@ -30,6 +32,11 @@ const { Title, Text } = Typography;
 interface CustomMap {
     [key: string]: string | undefined
 }
+
+interface CustomStintMap {
+    [key: string]: object | undefined
+}
+
 
 
 export const SessionShow = () => {
@@ -47,12 +54,15 @@ export const SessionShow = () => {
 
 
 
-    const driverGroupByNumber = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
+    const driverAcronym = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
         let key = driver_number.toString()
         if (!driversSoFar[key]) driversSoFar[key] = name_acronym;
         //driversSoFar[key].push(name_acronym);
         return driversSoFar;
     }, {});
+
+
+
 
     const maxLap = Math.max(...stintData.map(d => d.lap_end), 0);
 
@@ -86,6 +96,11 @@ export const SessionShow = () => {
                 item['driver_number'] = item['driver_number'].toString()
             }
             setLapData(lapData)
+
+            for (let item of stintData) {
+                item['driver_number'] = item['driver_number'].toString()
+                item['lap_interval'] = [item['lap_start'], item['lap_end']]
+            }
             setStintData(stintData)
 
             setIsLoading(false)
@@ -128,8 +143,8 @@ export const SessionShow = () => {
         legend: {
             position: 'right-top',
             itemName: {
-                formatter: function (text: string, item: ListItem, index: number) {
-                    return driverGroupByNumber[text] ? (text + " " + driverGroupByNumber[text]) : text
+                formatter: function (text: string) {
+                    return driverAcronym[text] ? (text + " " + driverAcronym[text]) : text
                 }  // 格式化文本函数
             }
 
@@ -137,7 +152,7 @@ export const SessionShow = () => {
         tooltip: {
             formatter: (data) => {
                 let driverNumber = data.driver_number
-                let name = driverGroupByNumber[driverNumber] ? (driverNumber + " " + driverGroupByNumber[driverNumber]) : driverNumber
+                let name = driverAcronym[driverNumber] ? (driverNumber + " " + driverAcronym[driverNumber]) : driverNumber
 
                 return {
                     name: name,
@@ -150,9 +165,34 @@ export const SessionShow = () => {
 
     const BarConfig: BarConfig = {
         data: stintData,
-        xField: 'lap_start',
+        xField: 'lap_interval',
         yField: 'driver_number',
         seriesField: 'compound',
+
+        isStack: false,
+        // isGroup: true,
+        // groupField: "compound",
+
+
+        yAxis: {
+            min: 0,
+            max: maxLap,
+            label: {
+            }
+
+        },
+
+        minBarWidth: 20,
+
+
+        color: function (datum: Datum) {
+            switch (datum.compound) {
+                case 'SOFT': return '#FF0000';
+                case 'MEDIUM': return '#FFFF00';
+                case 'HARD': return '#f2f2f2';
+            }
+            return '#000000'
+        },
 
 
     };
@@ -195,7 +235,7 @@ export const SessionShow = () => {
 
             </Card>
 
-            {/* <Card
+            <Card
                 style={{ height: '100%', marginTop: '10px' }}
                 headStyle={{ padding: '8px 16px' }}
                 bodyStyle={{ padding: '24px 24px 0 24px' }}
@@ -214,8 +254,8 @@ export const SessionShow = () => {
                     </div>
                 }
             >
-                <Bar {...BarConfig} height={500} />
-            </Card> */}
+                <StintGraph data={stintData} driverAcronym={driverAcronym} />
+            </Card>
         </div>
 
 
