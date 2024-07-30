@@ -1,6 +1,6 @@
 import { useCustom, useApiUrl } from "@refinedev/core";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Flex, Spin } from "antd";
+import { Flex, Row, Col, Spin } from "antd";
 
 import { ListItemProps } from "antd/lib/list";
 
@@ -13,18 +13,20 @@ import { Card, Typography } from "antd";
 // import type { ISession } from "../../interfaces";
 
 
-import { Line, LineConfig, Bar, BarConfig, ColumnConfig } from '@ant-design/plots'
 
 
 
 
 
-import { IDriver, ILap, ISession, IStint } from "../../interfaces";
+import { IDriver, ILap, IPosition, ISession, IStint } from "../../interfaces";
 import { useEffect, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
 import { Datum } from "@ant-design/charts";
 import { StintGraph } from "../../components/graph/stint";
+import { RacePaceGraph } from "../../components/graph/race-pace";
+import RaceWinnerCard from "../../components/races/winner-card";
+import { RacePositionTable } from "../../components/races/position-table";
 
 
 const { Title, Text } = Typography;
@@ -49,6 +51,7 @@ export const SessionShow = () => {
     const [sessionData, setSessionData] = useState<Array<ISession>>([]);
     const [lapData, setLapData] = useState<Array<ILap>>([]);
     const [stintData, setStintData] = useState<Array<IStint>>([]);
+    const [positionData, setPositionData] = useState<Array<IPosition>>([]);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -69,26 +72,27 @@ export const SessionShow = () => {
 
 
     async function fetchAllData() {
-        const [driverResponse, sessionResponse, lapResponse, stintResponse] = await Promise.all([
+        const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse] = await Promise.all([
             fetch(`${apiUrl}/drivers?session_key=${session_key}`),
             fetch(`${apiUrl}/sessions?session_key=${session_key}`),
             fetch(`${apiUrl}/laps?session_key=${session_key}`),
-            fetch(`${apiUrl}/stints?session_key=${session_key}`)
+            fetch(`${apiUrl}/stints?session_key=${session_key}`),
+            fetch(`${apiUrl}/position?session_key=${session_key}`)
         ]);
 
         const driverData = await driverResponse.json();
         const sessionData = await sessionResponse.json();
         const lapData = await lapResponse.json();
         const stintData = await stintResponse.json();
-
-        return [driverData, sessionData, lapData, stintData];
+        const positionData = await positionResponse.json();
+        return [driverData, sessionData, lapData, stintData, positionData];
     }
 
 
 
 
     useEffect(() => {
-        fetchAllData().then(([driverData, sessionData, lapData, stintData]) => {
+        fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
             setDriverData(driverData);
             setSessionData(sessionData);
 
@@ -98,164 +102,74 @@ export const SessionShow = () => {
             setLapData(lapData)
 
             for (let item of stintData) {
-                item['driver_number'] = item['driver_number'].toString()
+                item['driver_number'] = item['driver_number']?.toString()
                 item['lap_interval'] = [item['lap_start'], item['lap_end']]
             }
             setStintData(stintData)
 
+            setPositionData(positionData)
+
             setIsLoading(false)
 
         }).catch(error => {
+            console.error(error)
 
         });
     }, []);
 
-    const lapDataProps: LineConfig = {
-        data: lapData,
-        xField: "lap_number",
-        yField: "lap_duration",
-        isStack: false,
-        seriesField: 'driver_number',
 
 
-        yAxis: {
-            label: { formatter: (v) => `${v}`.replace('_', ' ').replace(/\d{1,3}(?=(\d{3})+$)/g, (s) => `${s},`) },
-            title: {
-                description: "Lap Time",
-
-            },
-            min: null
-        },
-        xAxis: {
-            title: {
-                description: "Lap",
-            },
-        },
-        meta: {
-            lap_duration: {
-                alias: '圈速'
-            },
-            lap_number: {
-                alias: '圈'
-            }
-        },
-        padding: [20, 100, 30, 80],
-        legend: {
-            position: 'right-top',
-            itemName: {
-                formatter: function (text: string) {
-                    return driverAcronym[text] ? (text + " " + driverAcronym[text]) : text
-                }  // 格式化文本函数
-            }
-
-        },
-        tooltip: {
-            formatter: (data) => {
-                let driverNumber = data.driver_number
-                let name = driverAcronym[driverNumber] ? (driverNumber + " " + driverAcronym[driverNumber]) : driverNumber
-
-                return {
-                    name: name,
-                    value: `${data.lap_duration}s`
-                }
-            }
-        },
-
-    };
-
-    const BarConfig: BarConfig = {
-        data: stintData,
-        xField: 'lap_interval',
-        yField: 'driver_number',
-        seriesField: 'compound',
-
-        isStack: false,
-        // isGroup: true,
-        // groupField: "compound",
-
-
-        yAxis: {
-            min: 0,
-            max: maxLap,
-            label: {
-            }
-
-        },
-
-        minBarWidth: 20,
-
-
-        color: function (datum: Datum) {
-            switch (datum.compound) {
-                case 'SOFT': return '#FF0000';
-                case 'MEDIUM': return '#FFFF00';
-                case 'HARD': return '#f2f2f2';
-            }
-            return '#000000'
-        },
-
-
-    };
 
     return (
         <div>
+
+            {/* <Row
+                gutter={[32, 32]}
+                style={{
+                    marginTop: '32px'
+                }}
+            >
+                <Col
+                    xs={24}
+                    sm={24}
+                    xl={8}
+                    style={{
+                        height: '460px'
+                    }}
+                >
+                    Finish Position Table
+
+                    <RacePositionTable positionData={positionData} driverAcronym={driverAcronym} isLoading={isLoading} />
+
+
+                </Col>
+
+            </Row>
+
+            <Row
+                gutter={[32, 32]}
+                style={{
+                    marginTop: '32px'
+                }}
+            >
+                <Col xs={24}>
+                    Lastest
+                </Col>
+            </Row> */}
+
 
 
             <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
                 {sessionData[0]?.country_name} {sessionData[0]?.session_type} Data
             </CustomText>
-            <Card
-                style={{ height: '100%', marginTop: '10px' }}
-                headStyle={{ padding: '8px 16px' }}
-                bodyStyle={{ padding: '24px 24px 0 24px' }}
-                title={
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        <FieldTimeOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-                        <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
-                            Race Pace
-                        </CustomText>
-                    </div>
-                }
-            >
-                {isLoading ? (
-                    <Flex align="center" gap="middle" justify="center">
-                        <Spin size="large" />
-                    </Flex>
 
 
-                ) : (
-                    <Line {...lapDataProps} height={500} />
-                )}
 
-            </Card>
+            <RacePaceGraph data={lapData} driverAcronym={driverAcronym} isLoading={isLoading} />
 
-            <Card
-                style={{ height: '100%', marginTop: '10px' }}
-                headStyle={{ padding: '8px 16px' }}
-                bodyStyle={{ padding: '24px 24px 0 24px' }}
-                title={
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        <FieldTimeOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
-                        <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
-                            Stint Data
-                        </CustomText>
-                    </div>
-                }
-            >
-                <StintGraph data={stintData} driverAcronym={driverAcronym} />
-            </Card>
+
+            <StintGraph data={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
+
         </div>
 
 

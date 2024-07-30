@@ -8,11 +8,12 @@ import {
 
 } from "@refinedev/antd";
 
-import { Table, Space } from "antd";
+import { Table, Space, Select } from "antd";
 
 import type { IDriver, ISession } from "../../interfaces";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 import dayjs from 'dayjs'
+import { SetStateAction, useEffect, useState } from "react";
 
 
 
@@ -24,37 +25,52 @@ export const SessionList = () => {
     const go = useGo();
 
 
-    //"https://api.openf1.org/v1/sessions?session_type=Race&year=2023"
 
-    // const { data, isLoading } = useCustom<IDriver>({
-    //   url: `${apiUrl}/sessions`,
-    //   method: "get",
-    //   config: {
-    //     query: {
-    //       session_type: "Race",
-    //       year: 2024
-    //     },
-    //   },
+    const [sessionData, setSessionData] = useState([]);
+    const [selectedYear, setSelectedYear] = useState("2024")
+
+
+    useEffect(() => {
+
+        fetch(`${apiUrl}/sessions?session_name=Race&year=${selectedYear}`)
+            .then(res => res.json())
+            .then(json => setSessionData(json))
+            .catch(err => console.error(err))
+
+    }, [selectedYear])
+
+
+
+    // const { tableProps } = useTable<ISession, HttpError>({
+    //     resource: "sessions?session_name=Race&year=2024",
+    //     hasPagination: false,
+
     // });
 
-    const { tableProps } = useTable<ISession, HttpError>({
-        resource: "sessions?session_name=Race&year=2024",
-        hasPagination: false,
-    });
-    // const { data, isLoading } = useMany<IDriver>({
-    //   resource: "drivers",
-    //   ids: categoryIds,
-    //   queryOptions: {
-    //     enabled: categoryIds.length > 0,
-    //   },
-    // });
+    const handleChange = (value: string) => setSelectedYear(value)
 
     return (
         <List>
-            <Table {...tableProps} rowKey="session_key">
+
+            Select year :
+
+            <Select
+                defaultValue="2024"
+                style={{ width: 120, margin: 20 }}
+                onChange={handleChange}
+                options={[
+
+                    { value: '2023' },
+                    { value: '2024' },
+                ]}
+            />
+
+            <br />
+
+            <Table dataSource={sessionData} rowKey="session_key">
                 <Table.Column dataIndex="country_name" title="Country" />
                 <Table.Column dataIndex="session_type" title="Session Type" />
-                <Table.Column dataIndex="session_name" title="Session Name" />
+                {/* <Table.Column dataIndex="session_name" title="Session Name" /> */}
                 <Table.Column
                     dataIndex="date_start"
                     title="Date"

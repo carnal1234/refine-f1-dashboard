@@ -4,8 +4,14 @@ import ReactDOM from 'react-dom';
 import { useEffect, useState } from "react";
 import { IStint } from '../../interfaces';
 
+import { Card, Typography } from "antd";
+import { FieldTimeOutlined } from '@ant-design/icons';
+import { Text as CustomText } from '../common';
+import { Flex, Spin } from "antd";
 
-export const StintGraph = (props: { data: any, driverAcronym: any }) => {
+
+
+export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: boolean }) => {
 
 
 
@@ -13,7 +19,7 @@ export const StintGraph = (props: { data: any, driverAcronym: any }) => {
         "SOFT" = "SOFT",
         "MEDIUM" = "MEDIUM",
         "HARD" = "HARD",
-        "INTER" = "INTER",
+        "INTERMEDIATE" = "INTERMEDIATE",
         "WET" = "WET"
     }
 
@@ -21,13 +27,14 @@ export const StintGraph = (props: { data: any, driverAcronym: any }) => {
 
 
     const sortedData = props.data
+        .filter((d: any) => d.driver_number !== null && d.driver_number !== undefined)
         .sort((a: any, b: any) => compoundOrder.indexOf(a.compound) - compoundOrder.indexOf(b.compound))
 
     const typeColorMapping = {
         "SOFT": '#f54842',
         'MEDIUM': '#f5d742',
         'HARD': '#cdcfc6',
-        'INTER': '#36ad3e',
+        'INTERMEDIATE': '#36ad3e',
         'WET': '#163cc7'
     }
 
@@ -102,7 +109,31 @@ export const StintGraph = (props: { data: any, driverAcronym: any }) => {
 
 
     };
-    return <Bar {...config
-    } />;
+    return (
+        <Card
+            style={{ height: '100%', marginTop: '10px' }}
+            headStyle={{ padding: '8px 16px' }}
+            bodyStyle={{ padding: '24px 24px 0 24px' }}
+            title={
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}
+                >
+                    <FieldTimeOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                    <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
+                        Stint Data
+                    </CustomText>
+                </div>
+            }
+        >
+
+            <Bar {...config} />
+        </Card>
+
+
+    );
 };
 

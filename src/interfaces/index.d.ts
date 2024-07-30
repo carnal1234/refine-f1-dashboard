@@ -73,3 +73,11 @@ export interface ILap {
         scope: string,
         sector: number
 }
+
+export interface IPosition{
+  date: string,
+  driver_number: number | string,
+  meeting_key: number,
+  position: number | string,
+  session_key: number,
+}
