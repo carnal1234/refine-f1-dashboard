@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc && refine build",
-    "dev": "refine dev",
+    "dev": "refine dev --port 3000",
     "refine": "refine",
     "start": "refine start"
   },
