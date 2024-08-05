@@ -14,6 +14,7 @@ import {
   GoogleOutlined,
   GithubOutlined,
   DashboardOutlined,
+  CrownOutlined
 } from "@ant-design/icons";
 
 import dataProvider from "@refinedev/simple-rest";
@@ -31,6 +32,8 @@ import "@refinedev/antd/dist/reset.css";
 import { DriverList } from "../src/pages/drivers";
 import { SessionList, SessionShow } from "../src/pages/races";
 import { DashboardPage } from "../src/pages/dashboard";
+
+import StandingTable from "./pages/standing/standing-table";
 
 const API_URL = "https://api.openf1.org/v1"
 
@@ -179,6 +182,15 @@ const App: React.FC = () => {
                 },
               },
               {
+                name: "standing",
+                list: "/standings",
+                meta: {
+                  label: "Standing",
+                  // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
+                  icon: <CrownOutlined />,
+                },
+              },
+              {
                 name: "Races",
                 list: "/sessions",
               },
@@ -217,6 +229,10 @@ const App: React.FC = () => {
 
                 <Route path="/drivers">
                   <Route index element={<DriverList />} />
+                </Route>
+
+                <Route path="/standings">
+                  <Route index element={<StandingTable />} />
                 </Route>
 
               </Route>

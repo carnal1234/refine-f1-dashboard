@@ -55,6 +55,7 @@ export const SessionList = () => {
             Select year :
 
             <Select
+                placeholder="Select year"
                 defaultValue="2024"
                 style={{ width: 120, margin: 20 }}
                 onChange={handleChange}
