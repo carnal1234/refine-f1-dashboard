@@ -10,7 +10,7 @@ import {
 
 import { Table, Space, Select } from "antd";
 
-import type { IDriver, ISession } from "../../interfaces";
+import type { DriverParams, SessionParams } from "../../interfaces/openf1";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 import dayjs from 'dayjs'
 import { SetStateAction, useEffect, useState } from "react";
@@ -41,7 +41,7 @@ export const SessionList = () => {
 
 
 
-    // const { tableProps } = useTable<ISession, HttpError>({
+    // const { tableProps } = useTable<SessionParams, HttpError>({
     //     resource: "sessions?session_name=Race&year=2024",
     //     hasPagination: false,
 
@@ -82,7 +82,7 @@ export const SessionList = () => {
 
 
 
-                <Table.Column<ISession>
+                <Table.Column<SessionParams>
                     title="Actions"
                     dataIndex="actions"
                     render={(value, record) => (

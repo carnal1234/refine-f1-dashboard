@@ -10,7 +10,6 @@ import { Show, MarkdownField } from "@refinedev/antd";
 
 import { Card, Typography } from "antd";
 
-// import type { ISession } from "../../interfaces";
 
 
 
@@ -18,8 +17,9 @@ import { Card, Typography } from "antd";
 
 
 
-import { IDriver, ILap, IPosition, ISession, IStint } from "../../interfaces";
-import { useEffect, useState } from "react";
+
+import { DriverParams, LapParams, PositionParams, SessionParams, StintParams } from "../../interfaces/openf1";
+import { useEffect, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
 import { Datum } from "@ant-design/charts";
@@ -27,39 +27,80 @@ import { StintGraph } from "../../components/graph/stint";
 import { RacePaceGraph } from "../../components/graph/race-pace";
 import RaceWinnerCard from "../../components/races/winner-card";
 import { RacePositionTable } from "../../components/races/position-table";
+import DriverAvatar from "../../components/driver-avatar";
+import DriverAvatarGroup from "@/components/driver-avatar-group";
+
+import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
+
+
+
 
 
 const { Title, Text } = Typography;
 
 interface CustomMap {
-    [key: string]: string | undefined
+    [key: string]: string
 }
 
 interface CustomStintMap {
-    [key: string]: object | undefined
+    [key: string]: object
 }
 
 
 
-export const SessionShow = () => {
+const SessionContent = () => {
+
+
     const apiUrl = useApiUrl();
 
 
     const { session_key } = useParams();
 
-    const [driverData, setDriverData] = useState<Array<IDriver>>([]);
-    const [sessionData, setSessionData] = useState<Array<ISession>>([]);
-    const [lapData, setLapData] = useState<Array<ILap>>([]);
-    const [stintData, setStintData] = useState<Array<IStint>>([]);
-    const [positionData, setPositionData] = useState<Array<IPosition>>([]);
-
+    const [driverData, setDriverData] = useState<Array<DriverParams>>([]);
+    const [sessionData, setSessionData] = useState<Array<SessionParams>>([]);
+    const [lapData, setLapData] = useState<Array<LapParams>>([]);
+    const [stintData, setStintData] = useState<Array<StintParams>>([]);
+    const [positionData, setPositionData] = useState<Array<PositionParams>>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+
+    //USER PREFERENCE
+
+    // const selectedDriver: Record<string, boolean> = {}
+    //const [selectedDriver, setSelectedDriver] = useState<Record<string, boolean>>({})
+
+    const {
+        isShowDriverSelect, setIsShowDriverSelect,
+        //drivers, setDrivers,
+        selectedDrivers, setSelectedDrivers,
+
+    } = useTelemetry();
+
+
+
+    const toggleDriverSelect = async (driver: DriverParams) => {
+
+        if (!driver) return;
+
+        let driver_no = driver.driver_number?.toString()!
+        if (driver_no && selectedDrivers.hasOwnProperty(driver_no)) {
+            //selectedDriver[driver_no] = !selectedDriver[driver_no]
+            let value = !selectedDrivers[driver_no]
+            setSelectedDrivers({ ...selectedDrivers, [driver_no]: value })
+        }
+        // racePaceGraphRef?.current?.updateChart()
+        // console.log(selectedDrivers)
+    }
+
+
+
+
 
 
 
     const driverAcronym = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
-        let key = driver_number.toString()
-        if (!driversSoFar[key]) driversSoFar[key] = name_acronym;
+        let key = driver_number?.toString()!
+        if (!driversSoFar[key]) driversSoFar[key] = name_acronym!;
         //driversSoFar[key].push(name_acronym);
         return driversSoFar;
     }, {});
@@ -67,38 +108,62 @@ export const SessionShow = () => {
 
 
 
-    const maxLap = Math.max(...stintData.map(d => d.lap_end), 0);
-
-
-
-    async function fetchAllData() {
-        const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse] = await Promise.all([
-            fetch(`${apiUrl}/drivers?session_key=${session_key}`),
-            fetch(`${apiUrl}/sessions?session_key=${session_key}`),
-            fetch(`${apiUrl}/laps?session_key=${session_key}`),
-            fetch(`${apiUrl}/stints?session_key=${session_key}`),
-            fetch(`${apiUrl}/position?session_key=${session_key}`)
-        ]);
-
-        const driverData = await driverResponse.json();
-        const sessionData = await sessionResponse.json();
-        const lapData = await lapResponse.json();
-        const stintData = await stintResponse.json();
-        const positionData = await positionResponse.json();
-        return [driverData, sessionData, lapData, stintData, positionData];
-    }
+    const maxLap = Math.max(...stintData.map(d => d.lap_end!), 0);
 
 
 
 
     useEffect(() => {
-        fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
+
+        const mode = import.meta.env.MODE
+
+        async function fetchAllData() {
+            const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse] = await Promise.all([
+                fetch(`${apiUrl}/drivers?session_key=${session_key}`),
+                fetch(`${apiUrl}/sessions?session_key=${session_key}`),
+                fetch(`${apiUrl}/laps?session_key=${session_key}`),
+                fetch(`${apiUrl}/stints?session_key=${session_key}`),
+                fetch(`${apiUrl}/position?session_key=${session_key}`)
+            ]);
+
+            const driverData = await driverResponse.json();
+            const sessionData = await sessionResponse.json();
+            const lapData = await lapResponse.json();
+            const stintData = await stintResponse.json();
+            const positionData = await positionResponse.json();
+            return [driverData, sessionData, lapData, stintData, positionData];
+        }
+
+        async function fetchMockData() {
+            const [driverData, sessionData, lapData, stintData, positionData] = await Promise.all([
+                await import('@/data/driver.json'),
+                await import('@/data/sessions.json'),
+                await import('@/data/lap.json'),
+                await import('@/data/stint.json'),
+                await import('@/data/position.json'),
+            ]);
+            return [driverData?.default, sessionData?.default, lapData?.default, stintData?.default, positionData?.default];
+        }
+
+        const setAllData = ([driverData, sessionData, lapData, stintData, positionData]: any) => {
+            for (let item of driverData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
+
             setDriverData(driverData);
+
+            for (let item of sessionData) {
+                //item['driver_number'] = item['driver_number']?.toString()
+            }
+
             setSessionData(sessionData);
+
+
 
             for (let item of lapData) {
                 item['driver_number'] = item['driver_number'].toString()
             }
+
             setLapData(lapData)
 
             for (let item of stintData) {
@@ -111,17 +176,58 @@ export const SessionShow = () => {
 
             setIsLoading(false)
 
-        }).catch(error => {
-            console.error(error)
+            let obj: Record<string, boolean> = {}
 
-        });
+            driverData.map((d: DriverParams) => {
+                if (d.driver_number) obj[d.driver_number?.toString()] = true
+            })
+
+            setSelectedDrivers(obj)
+        }
+
+        if (mode === "development") {
+            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
+
+                setAllData([driverData, sessionData, lapData, stintData, positionData])
+
+            }).catch(error => {
+                console.error(error)
+
+            })
+
+
+        } else {
+            fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData])
+
+            }).catch(error => {
+                console.error(error)
+
+            })
+
+
+        }
+
     }, []);
+
+    // useEffect(() => {
+    //     localStorage.setItem("selectedDriver", JSON.stringify(selectedDriver));
+    // }, [selectedDriver]);
+
+
+
+
+
+
+
+
+
 
 
 
 
     return (
-        <div>
+        <TelemetryProvider>
 
             {/* <Row
                 gutter={[32, 32]}
@@ -156,6 +262,9 @@ export const SessionShow = () => {
                     Lastest
                 </Col>
             </Row> */}
+            <div>
+                <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
+            </div>
 
 
 
@@ -165,14 +274,26 @@ export const SessionShow = () => {
 
 
 
-            <RacePaceGraph data={lapData} driverAcronym={driverAcronym} isLoading={isLoading} />
+            <RacePaceGraph data={lapData} driverData={driverData} driverAcronym={driverAcronym} isLoading={isLoading} selectedDrivers={selectedDrivers} />
 
 
             <StintGraph data={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
 
-        </div>
+        </TelemetryProvider>
 
 
     )
+}
 
+export const SessionPage: React.FC = () => {
+    return (
+        <TelemetryProvider>
+            <SessionContent />
+        </TelemetryProvider>
+    );
 };
+
+
+
+
+

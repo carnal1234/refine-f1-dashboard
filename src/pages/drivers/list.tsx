@@ -8,7 +8,7 @@ import {
 
 import { Table, Space } from "antd";
 
-import type { IDriver } from "../../interfaces";
+import type { DriverParams } from "../../interfaces/openf1";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 
 export const DriverList = () => {
@@ -17,7 +17,7 @@ export const DriverList = () => {
 
   //"https://api.openf1.org/v1/sessions?session_type=Race&year=2023"
 
-  const { data, isLoading } = useCustom<IDriver>({
+  const { data, isLoading } = useCustom<DriverParams>({
     url: `${apiUrl}/sessions`,
     method: "get",
     config: {
@@ -28,20 +28,13 @@ export const DriverList = () => {
     },
   });
 
-  const { tableProps } = useTable<IDriver, HttpError>({
+  const { tableProps } = useTable<DriverParams, HttpError>({
     resource: "drivers?session_key=latest",
     hasPagination: false,
   });
 
 
-  console.log(tableProps)
-  // const { data, isLoading } = useMany<IDriver>({
-  //   resource: "drivers",
-  //   ids: categoryIds,
-  //   queryOptions: {
-  //     enabled: categoryIds.length > 0,
-  //   },
-  // });
+
 
   return (
     <List>
@@ -51,7 +44,7 @@ export const DriverList = () => {
         <Table.Column dataIndex="team_name" title="Team Name" />
 
 
-        {/* <Table.Column<IDriver>
+        {/* <Table.Column<DriverParams>
           title="Actions"
           dataIndex="actions"
           render={(_, record) => (

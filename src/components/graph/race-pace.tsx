@@ -1,5 +1,5 @@
-import React from 'react'
-import { Line, LineConfig, Bar, BarConfig, ColumnConfig } from '@ant-design/plots'
+import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect } from 'react'
+import { Line, LineConfig, Bar, BarConfig, ColumnConfig, Plot, G2 } from '@ant-design/plots'
 
 import { Card, Typography } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
@@ -7,18 +7,44 @@ import { Text as CustomText } from '../common';
 import { Flex, Spin } from "antd";
 import { Datum } from "@ant-design/charts";
 
+import { LegendItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
+
+import { DriverParams, LapParams } from '@/interfaces/openf1';
+
+import { useTelemetry } from "@/context/TelemetryContext";
+
+import { groupBy } from '@/utilities/helper';
+
+interface RacePaceGraphProp {
+    data: Array<LapParams>,
+    driverData: Array<DriverParams>,
+    driverAcronym: any,
+    isLoading: boolean,
+    selectedDrivers: Record<string, boolean>
+}
 
 
-export const RacePaceGraph = (props: { data: any, driverAcronym: any, isLoading: boolean }) => {
 
-    const lapDataProps: LineConfig = {
-        data: props.data,
+export const RacePaceGraph = (props: RacePaceGraphProp) => {
+
+    const chartRef = useRef(null)
+
+    const driverDataGroupById = groupBy(props.driverData, i => i.driver_number!)
+
+    const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
+
+
+
+
+
+
+
+    const lineConfig: LineConfig = {
+        data: lapData,
         xField: "lap_number",
         yField: "lap_duration",
         isStack: false,
         seriesField: 'driver_number',
-
-
         yAxis: {
             label: { formatter: (v) => `${v}`.replace('_', ' ').replace(/\d{1,3}(?=(\d{3})+$)/g, (s) => `${s},`) },
             title: {
@@ -47,7 +73,8 @@ export const RacePaceGraph = (props: { data: any, driverAcronym: any, isLoading:
                 formatter: function (text: string) {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
                 }  // 格式化文本函数
-            }
+            },
+            selected: props.selectedDrivers,
 
         },
         tooltip: {
@@ -60,8 +87,25 @@ export const RacePaceGraph = (props: { data: any, driverAcronym: any, isLoading:
                 }
             }
         },
+        // color: (datum: Datum, defaultColor?: string) => {
+
+        //     let driver_no = datum.driver_number
+
+        //     if (driverDataGroupById[driver_no] && driverDataGroupById[driver_no][0].team_colour) {
+        //         return '#' + driverDataGroupById[driver_no][0].team_colour
+        //     }
+
+        //     return defaultColor
+        // }
+
+
+
 
     };
+
+
+
+
 
     return (
         <Card
@@ -90,11 +134,13 @@ export const RacePaceGraph = (props: { data: any, driverAcronym: any, isLoading:
 
 
             ) : (
-                <Line {...lapDataProps} height={500} />
+                <Line {...lineConfig} height={500} ref={chartRef} />
             )}
 
         </Card>
 
     )
 }
+
+
 

@@ -30,8 +30,9 @@ import { App as AntdApp, ConfigProvider } from "antd";
 import "@refinedev/antd/dist/reset.css";
 
 import { DriverList } from "../src/pages/drivers";
-import { SessionList, SessionShow } from "../src/pages/races";
+import { SessionList, SessionPage } from "../src/pages/races";
 import { DashboardPage } from "../src/pages/dashboard";
+
 
 import StandingTable from "./pages/standing/standing-table";
 
@@ -172,15 +173,15 @@ const App: React.FC = () => {
             dataProvider={dataProvider(API_URL)}
             routerProvider={routerProvider}
             resources={[
-              {
-                name: "dashboard",
-                list: "/",
-                meta: {
-                  label: "Dashboard",
-                  // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-                  icon: <DashboardOutlined />,
-                },
-              },
+              // {
+              //   name: "dashboard",
+              //   list: "/",
+              //   meta: {
+              //     label: "Dashboard",
+              //     // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
+              //     icon: <DashboardOutlined />,
+              //   },
+              // },
               {
                 name: "standing",
                 list: "/standings",
@@ -223,7 +224,7 @@ const App: React.FC = () => {
                 <Route index element={<DashboardPage />} />
                 <Route path="/sessions">
                   <Route index element={<SessionList />} />
-                  <Route path="show/:session_key" element={<SessionShow />} />
+                  <Route path="show/:session_key" element={<SessionPage />} />
 
                 </Route>
 

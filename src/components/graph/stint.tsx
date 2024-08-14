@@ -2,7 +2,7 @@ import { Bar, Datum, BarConfig } from '@ant-design/plots-new';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { useEffect, useState } from "react";
-import { IStint } from '../../interfaces';
+import { StintParams } from '@/interfaces/openf1';
 
 import { Card, Typography } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
@@ -42,9 +42,9 @@ export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: bo
         [key: string]: string | undefined
     }
 
-    const usedStintMap = props?.data.reduce((dataSoFar: dataMap, { compound, ...props }: IStint) => {
+    const usedStintMap = props?.data.reduce((dataSoFar: dataMap, { compound, ...props }: StintParams) => {
 
-        if (!dataSoFar[compound]) dataSoFar[compound] = typeColorMapping[compound as keyof typeof typeColorMapping];
+        if (!dataSoFar[compound!]) dataSoFar[compound!] = typeColorMapping[compound as keyof typeof typeColorMapping];
         //driversSoFar[key].push(name_acronym);
         return dataSoFar;
     }, {});
