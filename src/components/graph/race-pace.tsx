@@ -9,18 +9,28 @@ import { Datum } from "@ant-design/charts";
 
 import { LegendItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
 
-import { DriverParams, LapParams } from '@/interfaces/openf1';
+import { DriverParams, LapParams, RaceControlParams, StintParams, PitParams } from '@/interfaces/openf1';
 
 import { useTelemetry } from "@/context/TelemetryContext";
 
-import { groupBy } from '@/utilities/helper';
+import { formatSecondsToTime, groupBy } from '@/utilities/helper';
+
+import { Annotation } from '@antv/g2plot/lib/types/annotation'
+
+import { getCompoundComponent } from '../common/tyre';
+
+import { renderToString } from 'react-dom/server';
 
 interface RacePaceGraphProp {
     data: Array<LapParams>,
     driverData: Array<DriverParams>,
+    stintData: Array<StintParams>,
+    raceControlData: Array<RaceControlParams>,
+    pitData: Array<PitParams>,
     driverAcronym: any,
     isLoading: boolean,
-    selectedDrivers: Record<string, boolean>
+    selectedDrivers: Record<string, boolean>,
+    onToolTipChange: (lap: number) => void
 }
 
 
@@ -29,63 +39,177 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     const chartRef = useRef(null)
 
-    const driverDataGroupById = groupBy(props.driverData, i => i.driver_number!)
+    const graphHeight = 500
+
+    const driverDataGroupById = props.driverData ? groupBy(props.driverData, i => i.driver_number!) : []
+
+    const stintDataGroupById = props.stintData ? groupBy(props.stintData, i => i.driver_number!) : []
+
+    const pitDataGroupById = props.pitData ? groupBy(props.pitData, i => i.driver_number!) : []
+
+
+    const raceControlDataGroupById: Record<number | "OTHER", any> = groupBy(props.raceControlData, i => i.driver_number! || "OTHER")
+
+    for (const driver_number in raceControlDataGroupById) {
+        raceControlDataGroupById[driver_number] = groupBy(raceControlDataGroupById[driver_number], (i: any) => i.lap_number!)
+    }
+
+
+
 
     const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
 
+    const lapDataWithStint: any = lapData.map(data => {
+        let lap = data.lap_number!
+        let driver_number = data.driver_number!
+        let stint = stintDataGroupById[driver_number]?.find(i =>
+            i.lap_start && i.lap_end && lap >= i.lap_start && lap <= i.lap_end)
+        return Object.assign(data, { stint: stint });
+
+    })
+    const getSafetyCarAnnotation = (data: Array<RaceControlParams>): Annotation[] => {
+
+        const filter_data = data.filter(i => i.category === "SafetyCar")
+
+        let isSafetyCarDeployed = false
+        let safetyCarOutLap: number | undefined = 0
+        let safetyCarInLap: number | undefined = 99
+
+        let annotations: Annotation[] = []
+
+        filter_data.map(d => {
+            if (d.message === "SAFETY CAR DEPLOYED") {
+                isSafetyCarDeployed = true
+                safetyCarOutLap = d.lap_number
+                if (safetyCarOutLap) {
+                    annotations.push(
+                        {
+                            id: `dataMarker_SC_[${safetyCarOutLap}]`,
+                            type: "dataMarker",
+                            position: [safetyCarOutLap, 'max'],
+                            text: {
+                                content: `${d.message} AT LAP ${safetyCarOutLap}`,
+                                style: {
+                                    fill: 'black'
+                                }
+                            },
+
+                            direction: 'upward'
+                        }
+
+                    )
+
+                }
 
 
 
+
+            }
+            else if (d.message === "SAFETY CAR IN THIS LAP") {
+                isSafetyCarDeployed = false
+                safetyCarInLap = d.lap_number
+
+                if (safetyCarOutLap && safetyCarInLap) {
+                    annotations.push(
+                        {
+                            id: `safetyCar[${safetyCarOutLap} - ${safetyCarInLap}]`,
+                            type: "region",
+                            start: [safetyCarOutLap, 'min'],
+                            end: [safetyCarInLap, 'max'],
+                        }
+                    )
+                }
+
+
+            }
+
+        })
+        return annotations
+    }
+
+    const itemTemplate = `<li class="g2-tooltip-list-item" data-index={index} style="list-style-type: none; padding: 0px; margin: 12px 0px;">
+    <span class="g2-tooltip-marker" style="background: {color}; width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+    <span class="g2-tooltip-name">{name}</span>:
+    <span style="max-width: 12px; display: inline-block; margin-left: 10px; float:right; ">{stintCompoundSVG}</span>
+    <span class="g2-tooltip-value" style="display: flex; margin-left: 30px;">{value} </span> 
+    <span style="display: inline-block; margin-left: 10px; float:right;"><strong style="font-style:italic; color:red;">{isPit}</strong></span>
+
+    </li>`
 
 
 
     const lineConfig: LineConfig = {
-        data: lapData,
+        data: lapDataWithStint,
         xField: "lap_number",
         yField: "lap_duration",
         isStack: false,
         seriesField: 'driver_number',
-        yAxis: {
-            label: { formatter: (v) => `${v}`.replace('_', ' ').replace(/\d{1,3}(?=(\d{3})+$)/g, (s) => `${s},`) },
+        xAxis: {
+            label: { formatter: (v) => v },
+
             title: {
-                description: "Lap Time",
+                text: "圈",
+                description: "Lap",
+                position: "center",
+
+            },
+        },
+        yAxis: {
+            label: { formatter: (v) => formatSecondsToTime(v) },
+            title: {
+                text: "圈速(s)",
+                description: "圈速(s)",
+                position: "bottom",
+                style: {
+                    fontSize: 12, // 文本大小
+                    textAlign: 'center', // 文本对齐方式
+                    fill: '#999', // 文本颜色
+                    // ...
+                }
 
             },
             min: null
         },
-        xAxis: {
-            title: {
-                description: "Lap",
-            },
-        },
-        meta: {
-            lap_duration: {
-                alias: '圈速'
-            },
-            lap_number: {
-                alias: '圈'
-            }
-        },
-        padding: [20, 100, 30, 80],
+        autoFit: true,
+        padding: [80, 100, 80, 80],
+        smooth: true,
         legend: {
             position: 'right-top',
             itemName: {
                 formatter: function (text: string) {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
-                }  // 格式化文本函数
+                }
             },
             selected: props.selectedDrivers,
 
         },
         tooltip: {
+            title: (title: string, datum: Datum) => {
+                return `第 ${datum.lap_number} 圈`
+            },
+            fields: ['driver_number', 'lap_number', 'lap_duration', 'stint'],
             formatter: (datum: Datum) => {
                 let driverNumber = datum.driver_number
                 let name = props.driverAcronym[driverNumber] ? (driverNumber + " " + props.driverAcronym[driverNumber]) : driverNumber
+                // let stint = stintDataGroupById[driverNumber].filter(s => s.)
+                let stintCompoundSVG = renderToString(getCompoundComponent(datum.stint.compound))
+                let pitData = pitDataGroupById[driverNumber]
+                let isPit = pitData?.some(i => i.lap_number === datum.lap_number) ? "In Pit" : ""
+                isPit = pitData?.some(i => i.lap_number === datum.lap_number - 1) ? "Out Lap" : isPit
                 return {
                     name: name,
-                    value: `${datum.lap_duration}s`
+                    value: formatSecondsToTime(datum.lap_duration),
+                    stintCompoundSVG: stintCompoundSVG,
+                    isPit: isPit
                 }
-            }
+            },
+            containerTpl: '<div class="g2-tooltip">'
+                + '<div class="g2-tooltip-title" style="margin:10px 0;"></div>'
+                + '<ul class="g2-tooltip-list"></ul></div>',
+            itemTpl: itemTemplate,
+
+
+
         },
         // color: (datum: Datum, defaultColor?: string) => {
 
@@ -98,10 +222,16 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         //     return defaultColor
         // }
 
-
-
-
+        annotations: getSafetyCarAnnotation(props.raceControlData),
+        onReady(chart) {
+            chart.on('tooltip:change', (ev: any) => {
+                let data = ev.data.items && ev.data.items.length > 0 ? ev.data.items[0] : null
+                let lap: number = data?.data.lap_number
+                props.onToolTipChange(lap)
+            })
+        },
     };
+
 
 
 
@@ -131,12 +261,9 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 <Flex align="center" gap="middle" justify="center">
                     <Spin size="large" />
                 </Flex>
-
-
             ) : (
-                <Line {...lineConfig} height={500} ref={chartRef} />
+                <Line {...lineConfig} height={graphHeight} ref={chartRef} />
             )}
-
         </Card>
 
     )

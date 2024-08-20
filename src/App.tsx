@@ -9,6 +9,7 @@ import {
   ErrorComponent,
   AuthPage,
   RefineThemes,
+  ThemedTitleV2,
 } from "@refinedev/antd";
 import {
   GoogleOutlined,
@@ -164,12 +165,25 @@ const App: React.FC = () => {
     }),
   };
 
+  const CustomThemeLayout: React.FC = () => {
+    return (
+      <ThemedLayoutV2 Title={({ collapsed }) => (
+        <ThemedTitleV2
+          collapsed={collapsed}
+          text="Formula 1 Dashboard"
+        />
+      )}>
+        <Outlet />
+      </ThemedLayoutV2>
+    )
+  }
+
   return (
     <BrowserRouter>
       <ConfigProvider theme={RefineThemes.Blue}>
         <AntdApp>
           <Refine
-            authProvider={authProvider}
+            // authProvider={authProvider}
             dataProvider={dataProvider(API_URL)}
             routerProvider={routerProvider}
             resources={[
@@ -211,14 +225,7 @@ const App: React.FC = () => {
             <Routes>
               <Route
                 element={
-                  <Authenticated
-                    key="authenticated-routes"
-                    fallback={<CatchAllNavigate to="/login" />}
-                  >
-                    <ThemedLayoutV2>
-                      <Outlet />
-                    </ThemedLayoutV2>
-                  </Authenticated>
+                  <CustomThemeLayout />
                 }
               >
                 <Route index element={<DashboardPage />} />
@@ -238,106 +245,12 @@ const App: React.FC = () => {
 
               </Route>
 
-              <Route
-                element={
-                  <Authenticated key="auth-pages" fallback={<Outlet />}>
-                    <NavigateToResource resource="posts" />
-                  </Authenticated>
-                }
-              >
-                <Route
-                  path="/login"
-                  element={
-                    <AuthPage
-                      type="login"
-                      formProps={{
-                        initialValues: {
-                          ...authCredentials,
-                        },
-                      }}
-                      providers={[
-                        {
-                          name: "google",
-                          label: "Sign in with Google",
-                          icon: (
-                            // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-                            <GoogleOutlined
-                              style={{
-                                fontSize: 24,
-                                lineHeight: 0,
-                              }}
-                            />
-                          ),
-                        },
-                        {
-                          name: "github",
-                          label: "Sign in with GitHub",
-                          icon: (
-                            // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-                            <GithubOutlined
-                              style={{
-                                fontSize: 24,
-                                lineHeight: 0,
-                              }}
-                            />
-                          ),
-                        },
-                      ]}
-                    />
-                  }
-                />
-                <Route
-                  path="/register"
-                  element={
-                    <AuthPage
-                      type="register"
-                      providers={[
-                        {
-                          name: "google",
-                          label: "Sign in with Google",
-                          icon: (
-                            // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-                            <GoogleOutlined
-                              style={{
-                                fontSize: 24,
-                                lineHeight: 0,
-                              }}
-                            />
-                          ),
-                        },
-                        {
-                          name: "github",
-                          label: "Sign in with GitHub",
-                          icon: (
-                            // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-                            <GithubOutlined
-                              style={{
-                                fontSize: 24,
-                                lineHeight: 0,
-                              }}
-                            />
-                          ),
-                        },
-                      ]}
-                    />
-                  }
-                />
-                <Route
-                  path="/forgot-password"
-                  element={<AuthPage type="forgotPassword" />}
-                />
-                <Route
-                  path="/update-password"
-                  element={<AuthPage type="updatePassword" />}
-                />
-              </Route>
+
 
               <Route
                 element={
                   <Authenticated key="catch-all">
-                    <ThemedLayoutV2>
-                      <Outlet />
-                    </ThemedLayoutV2>
+                    <CustomThemeLayout />
                   </Authenticated>
                 }
               >

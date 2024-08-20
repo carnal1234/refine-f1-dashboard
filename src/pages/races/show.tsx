@@ -18,7 +18,7 @@ import { Card, Typography } from "antd";
 
 
 
-import { DriverParams, LapParams, PositionParams, SessionParams, StintParams } from "../../interfaces/openf1";
+import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams } from "../../interfaces/openf1";
 import { useEffect, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
@@ -31,6 +31,7 @@ import DriverAvatar from "../../components/driver-avatar";
 import DriverAvatarGroup from "@/components/driver-avatar-group";
 
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
+import EventCard, { EventCardRef } from "@/components/event-card";
 
 
 
@@ -61,20 +62,18 @@ const SessionContent = () => {
     const [lapData, setLapData] = useState<Array<LapParams>>([]);
     const [stintData, setStintData] = useState<Array<StintParams>>([]);
     const [positionData, setPositionData] = useState<Array<PositionParams>>([]);
+    const [raceControlData, setRaceControlData] = useState<Array<RaceControlParams>>([]);
+    const [pitData, setPitData] = useState<Array<PitParams>>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-
-    //USER PREFERENCE
-
-    // const selectedDriver: Record<string, boolean> = {}
-    //const [selectedDriver, setSelectedDriver] = useState<Record<string, boolean>>({})
 
     const {
         isShowDriverSelect, setIsShowDriverSelect,
         //drivers, setDrivers,
         selectedDrivers, setSelectedDrivers,
-
     } = useTelemetry();
+
+    const raceControlRef = useRef<EventCardRef>(null);
+
 
 
 
@@ -84,12 +83,15 @@ const SessionContent = () => {
 
         let driver_no = driver.driver_number?.toString()!
         if (driver_no && selectedDrivers.hasOwnProperty(driver_no)) {
-            //selectedDriver[driver_no] = !selectedDriver[driver_no]
             let value = !selectedDrivers[driver_no]
             setSelectedDrivers({ ...selectedDrivers, [driver_no]: value })
         }
-        // racePaceGraphRef?.current?.updateChart()
-        // console.log(selectedDrivers)
+    }
+
+    const onRacePaceToolTipChange = (lap_number: number) => {
+        if (lap_number) {
+            if (raceControlRef && raceControlRef.current) raceControlRef.current.updateLap(lap_number)
+        }
     }
 
 
@@ -101,7 +103,6 @@ const SessionContent = () => {
     const driverAcronym = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
         let key = driver_number?.toString()!
         if (!driversSoFar[key]) driversSoFar[key] = name_acronym!;
-        //driversSoFar[key].push(name_acronym);
         return driversSoFar;
     }, {});
 
@@ -114,16 +115,17 @@ const SessionContent = () => {
 
 
     useEffect(() => {
-
         const mode = import.meta.env.MODE
 
         async function fetchAllData() {
-            const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse] = await Promise.all([
+            const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse, raceControlResponse, pitResponse] = await Promise.all([
                 fetch(`${apiUrl}/drivers?session_key=${session_key}`),
                 fetch(`${apiUrl}/sessions?session_key=${session_key}`),
                 fetch(`${apiUrl}/laps?session_key=${session_key}`),
                 fetch(`${apiUrl}/stints?session_key=${session_key}`),
-                fetch(`${apiUrl}/position?session_key=${session_key}`)
+                fetch(`${apiUrl}/position?session_key=${session_key}`),
+                fetch(`${apiUrl}/race_control?session_key=${session_key}`),
+                fetch(`${apiUrl}/pit?session_key=${session_key}`),
             ]);
 
             const driverData = await driverResponse.json();
@@ -131,21 +133,27 @@ const SessionContent = () => {
             const lapData = await lapResponse.json();
             const stintData = await stintResponse.json();
             const positionData = await positionResponse.json();
-            return [driverData, sessionData, lapData, stintData, positionData];
+            const raceControlData = await raceControlResponse.json()
+            const pitData = await pitResponse.json()
+            return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData];
         }
 
         async function fetchMockData() {
-            const [driverData, sessionData, lapData, stintData, positionData] = await Promise.all([
+            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
                 await import('@/data/driver.json'),
                 await import('@/data/sessions.json'),
                 await import('@/data/lap.json'),
                 await import('@/data/stint.json'),
                 await import('@/data/position.json'),
+                await import('@/data/race-control.json'),
+                await import('@/data/pit.json'),
+
             ]);
-            return [driverData?.default, sessionData?.default, lapData?.default, stintData?.default, positionData?.default];
+            return [driverData?.default, sessionData?.default, lapData?.default,
+            stintData?.default, positionData?.default, raceControlData?.default, pitData?.default];
         }
 
-        const setAllData = ([driverData, sessionData, lapData, stintData, positionData]: any) => {
+        const setAllData = ([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]: any) => {
             for (let item of driverData) {
                 item['driver_number'] = item['driver_number']?.toString()
             }
@@ -157,8 +165,6 @@ const SessionContent = () => {
             }
 
             setSessionData(sessionData);
-
-
 
             for (let item of lapData) {
                 item['driver_number'] = item['driver_number'].toString()
@@ -174,6 +180,11 @@ const SessionContent = () => {
 
             setPositionData(positionData)
 
+            setRaceControlData(raceControlData)
+
+            setPitData(pitData)
+
+
             setIsLoading(false)
 
             let obj: Record<string, boolean> = {}
@@ -186,9 +197,9 @@ const SessionContent = () => {
         }
 
         if (mode === "development") {
-            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
+            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]) => {
 
-                setAllData([driverData, sessionData, lapData, stintData, positionData])
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData])
 
             }).catch(error => {
                 console.error(error)
@@ -197,8 +208,8 @@ const SessionContent = () => {
 
 
         } else {
-            fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData]) => {
-                setAllData([driverData, sessionData, lapData, stintData, positionData])
+            fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData])
 
             }).catch(error => {
                 console.error(error)
@@ -210,78 +221,56 @@ const SessionContent = () => {
 
     }, []);
 
-    // useEffect(() => {
-    //     localStorage.setItem("selectedDriver", JSON.stringify(selectedDriver));
-    // }, [selectedDriver]);
-
-
-
-
-
-
-
-
-
-
-
-
-
     return (
-        <TelemetryProvider>
-
-            {/* <Row
+        <>
+            <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
+                {sessionData[0]?.country_name} {sessionData[0]?.session_type} Data
+            </CustomText>
+            <div style={{ margin: '1rem', padding: '8px 16px' }}>
+                <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
+            </div>
+            <Row
                 gutter={[32, 32]}
                 style={{
-                    marginTop: '32px'
-                }}
-            >
-                <Col
-                    xs={24}
-                    sm={24}
-                    xl={8}
-                    style={{
-                        height: '460px'
-                    }}
-                >
-                    Finish Position Table
-
-                    <RacePositionTable positionData={positionData} driverAcronym={driverAcronym} isLoading={isLoading} />
-
+                    marginTop: '32px',
+                    width: '100%'
+                }}>
+                <Col span={18}>
+                    <RacePaceGraph
+                        pitData={pitData}
+                        stintData={stintData}
+                        raceControlData={raceControlData}
+                        data={lapData}
+                        driverData={driverData}
+                        driverAcronym={driverAcronym}
+                        isLoading={isLoading}
+                        selectedDrivers={selectedDrivers}
+                        onToolTipChange={onRacePaceToolTipChange}
+                    />
 
                 </Col>
+                <Col span={6}  >
+                    <EventCard dataList={raceControlData} ref={raceControlRef} driverAcronym={driverAcronym} />
 
+                </Col>
             </Row>
 
             <Row
                 gutter={[32, 32]}
                 style={{
-                    marginTop: '32px'
-                }}
-            >
-                <Col xs={24}>
-                    Lastest
+                    marginTop: '32px',
+                    width: '100%'
+                }}>
+                <Col span={24}>
+                    <StintGraph data={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
+
+
                 </Col>
-            </Row> */}
-            <div>
-                <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
-            </div>
+            </Row>
 
 
 
-            <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
-                {sessionData[0]?.country_name} {sessionData[0]?.session_type} Data
-            </CustomText>
-
-
-
-            <RacePaceGraph data={lapData} driverData={driverData} driverAcronym={driverAcronym} isLoading={isLoading} selectedDrivers={selectedDrivers} />
-
-
-            <StintGraph data={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
-
-        </TelemetryProvider>
-
-
+        </>
     )
 }
 
