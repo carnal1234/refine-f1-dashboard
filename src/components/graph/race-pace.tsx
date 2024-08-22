@@ -250,7 +250,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                         gap: '8px'
                     }}
                 >
-                    <FieldTimeOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                    <FieldTimeOutlined />
                     <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
                         Race Pace
                     </CustomText>

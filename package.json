@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@ant-design/charts": "^2.1.2",
-    "@ant-design/icons": "5.0.1",
+    "@ant-design/icons": "5.3.2",
     "@ant-design/plots": "^1.2.5",
     "@ant-design/plots-new": "npm:@ant-design/plots@2.2.6",
     "@refinedev/antd": "^5.42.0",

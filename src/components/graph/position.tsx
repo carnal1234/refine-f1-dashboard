@@ -76,7 +76,7 @@ export const PositionGraph = (props: { data: any, driverAcronym: any, isLoading:
                         gap: '8px'
                     }}
                 >
-                    <FieldTimeOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />
+                    <FieldTimeOutlined />
                     <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
                         Race Pace
                     </CustomText>

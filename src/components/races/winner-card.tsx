@@ -62,7 +62,7 @@ const RaceWinnerCard = ({
                     ) : (
                         <>
                             <Text>MAX VERSTAPPEN</Text>
-                            <Avatar size="large" icon={<UserOutlined onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} />} src="https://www.formula1.com/content/dam/fom-website/drivers/M/MAXVER01_Max_Verstappen/maxver01.png.transform/1col/image.png" />
+                            <Avatar size="large" icon={<UserOutlined />} src="https://www.formula1.com/content/dam/fom-website/drivers/M/MAXVER01_Max_Verstappen/maxver01.png.transform/1col/image.png" />
 
                         </>
                     )}
