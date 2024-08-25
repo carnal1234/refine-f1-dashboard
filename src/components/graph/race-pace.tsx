@@ -56,7 +56,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
 
 
-
     const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
 
     const lapDataWithStint: any = lapData.map(data => {

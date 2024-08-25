@@ -1,4 +1,4 @@
-import { Bar, Datum, BarConfig } from '@ant-design/plots-new';
+import { Bar, BarConfig } from '@ant-design/plots';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { useEffect, useState } from "react";
@@ -8,10 +8,15 @@ import { Card, Typography } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
 import { Text as CustomText } from '../common';
 import { Flex, Spin } from "antd";
+import { Chart } from '@ant-design/plots-new/es/core/base/chart';
+
+import { Datum } from '@antv/g2plot/lib/types/common'
+import { TooltipItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
 
 
 
-export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: boolean }) => {
+
+export const StintGraph = (props: { stintData: any, driverAcronym: any, isLoading: boolean }) => {
 
 
 
@@ -26,9 +31,10 @@ export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: bo
     const compoundOrder = Object.values(COMPOUND);
 
 
-    const sortedData = props.data
+    const sortedData = props.stintData
         .filter((d: any) => d.driver_number !== null && d.driver_number !== undefined)
-        .sort((a: any, b: any) => compoundOrder.indexOf(a.compound) - compoundOrder.indexOf(b.compound))
+        .sort((a: any, b: any) => a.driver_number - b.driver_number)
+    // .sort((a: any, b: any) => compoundOrder.indexOf(a.compound) - compoundOrder.indexOf(b.compound))
 
     const typeColorMapping = {
         "SOFT": '#f54842',
@@ -42,80 +48,101 @@ export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: bo
         [key: string]: string | undefined
     }
 
-    const usedStintMap = props?.data.reduce((dataSoFar: dataMap, { compound, ...props }: StintParams) => {
+    const usedStintMap = props?.stintData.reduce((dataSoFar: dataMap, { compound, ...props }: StintParams) => {
 
         if (!dataSoFar[compound!]) dataSoFar[compound!] = typeColorMapping[compound as keyof typeof typeColorMapping];
         //driversSoFar[key].push(name_acronym);
         return dataSoFar;
     }, {});
 
-    const colorRange = []
-
-    for (const [compound, color] of Object.entries(typeColorMapping)) {
-        if (usedStintMap[compound]) {
-            colorRange.push(color)
-        }
-    }
 
 
 
 
-
-    const config = {
+    const config: BarConfig = {
         data: sortedData,
-        yField: 'lap_interval',
-        xField: 'driver_number',
-        colorField: 'compound',
-        stack: false,
+        yField: 'driver_number',
+        xField: 'lap_interval',
+        seriesField: 'compound',
+        // autoFit: true,
+        isStack: false,
+
         tooltip: {
-            // render: (event, { lap_duration, compound }) => <div>Your custom render content here.</div>,
-            title: "compound",
-            items: [
-                {
-                    channel: 'lap_interval',
-                    field: 'lap_interval',
-                    valueFormatter: ((d: any) => {
-                        return `Lap ${d[0]} - Lap ${d[1]}`
+            title: "Strategy",
+            fields: ['driver_number', 'lap_interval', 'compound', 'lap_start'],
+            customItems: (originalItems: TooltipItem[]) => {
+                if (originalItems.length > 0) {
+                    let driver_number = originalItems[0].data.driver_number
+                    let data = sortedData.filter((e: any) => e.driver_number === driver_number)
+                    let items = data.map((d: any) => {
+                        let color = typeColorMapping[d.compound as keyof typeof typeColorMapping]
+                        let interval = `Lap ${d.lap_start} - Lap ${d.lap_end}`
+
+                        return {
+                            color: color,
+                            data: d,
+                            marker: true,
+                            title: "Strategy",
+                            name: d.compound,
+                            value: interval,
+
+                        }
                     })
+
+
+                    return items
+                } else {
+                    return originalItems
                 }
-            ]
-        },
-        sort: {
-            reverse: false,
-            by: 'x',
-        },
-        scale: {
-            color: {
-                range: colorRange,
-            },
-        },
-        axis: {
-            y: {
-
 
             },
-            x: {
-                labelFormatter: (v: string | number) => {
 
-                    if (props?.driverAcronym[v]) return `${v} ${props.driverAcronym[v]}`
-                    else return v
-                },
-                labelSpacing: 4,
-                style: {
 
-                },
-            },
+
+
         },
 
+
+        yAxis: {
+            label: {
+
+                formatter: (v) => { return `${v} ${props.driverAcronym[v]}` },
+            },
+
+
+
+        },
+        xAxis: {
+            title: {
+                text: "圈",
+                description: "Lap",
+                position: "center",
+
+            },
+            label: {
+                formatter: (v) => { return v }
+            }
+        },
+        interactions: [{
+            type: "legend-filter",
+            enable: false,
+        }],
+
+
+        color: (datum: Datum, defaultColor?: string) => {
+            let color = typeColorMapping[datum.compound as keyof typeof typeColorMapping]
+            return datum.compound && color ? color : (defaultColor ? defaultColor : '#fff')
+        },
 
     };
     return (
         <Card
             style={{ height: '100%', marginTop: '10px' }}
-            headStyle={{ padding: '8px 16px' }}
+            headStyle={{ padding: '8px 16px' }
+            }
             bodyStyle={{ padding: '24px 24px 0 24px' }}
             title={
-                <div
+                < div
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -126,12 +153,12 @@ export const StintGraph = (props: { data: any, driverAcronym: any, isLoading: bo
                     <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
                         Stint Data
                     </CustomText>
-                </div>
+                </div >
             }
         >
 
-            <Bar {...config} />
-        </Card>
+            <Bar {...config} height={500} />
+        </Card >
 
 
     );

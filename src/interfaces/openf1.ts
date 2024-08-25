@@ -220,7 +220,7 @@ export interface PitParams {
  */
 export interface PositionParams {
     date?: string;
-    driver_number?: number;
+    driver_number?: number | string;
     meeting_key?: number | string;
     position?: number;
     session_key?: number | string;

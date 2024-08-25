@@ -219,7 +219,11 @@ const App: React.FC = () => {
             options={{
               syncWithLocation: true,
               warnWhenUnsavedChanges: true,
+              title: {
+                text: "Formula 1 Dashboard"
+              }
             }}
+
           >
             <Routes>
               <Route

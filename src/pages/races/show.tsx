@@ -32,6 +32,7 @@ import DriverAvatarGroup from "@/components/driver-avatar-group";
 
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
 import EventCard, { EventCardRef } from "@/components/event-card";
+import { PositionGraph } from "@/components/graph/position";
 
 
 
@@ -117,6 +118,15 @@ const SessionContent = () => {
     useEffect(() => {
         const mode = import.meta.env.MODE
 
+
+
+
+
+
+
+
+
+
         async function fetchAllData() {
             const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse, raceControlResponse, pitResponse] = await Promise.all([
                 fetch(`${apiUrl}/drivers?session_key=${session_key}`),
@@ -138,6 +148,8 @@ const SessionContent = () => {
             return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData];
         }
 
+
+
         async function fetchMockData() {
             const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
                 await import('@/data/driver.json'),
@@ -157,32 +169,51 @@ const SessionContent = () => {
             for (let item of driverData) {
                 item['driver_number'] = item['driver_number']?.toString()
             }
-
-            setDriverData(driverData);
-
-            for (let item of sessionData) {
-                //item['driver_number'] = item['driver_number']?.toString()
-            }
-
-            setSessionData(sessionData);
-
             for (let item of lapData) {
-                item['driver_number'] = item['driver_number'].toString()
+                item['driver_number'] = item['driver_number']?.toString()
             }
-
-            setLapData(lapData)
-
+            for (let item of sessionData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
+            for (let item of positionData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
             for (let item of stintData) {
                 item['driver_number'] = item['driver_number']?.toString()
                 item['lap_interval'] = [item['lap_start'], item['lap_end']]
             }
+            for (let item of raceControlData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
+            for (let item of pitData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
+
+
+
+            setDriverData(driverData);
+            setSessionData(sessionData);
+            setLapData(lapData)
             setStintData(stintData)
-
             setPositionData(positionData)
-
             setRaceControlData(raceControlData)
-
             setPitData(pitData)
+
+            // sessionStorage.setItem('session', JSON.stringify(meetingData));
+            sessionStorage.setItem('session', JSON.stringify(sessionData));
+            sessionStorage.setItem('driver', JSON.stringify(driverData));
+            sessionStorage.setItem('raceControl', JSON.stringify(raceControlData));
+            // sessionStorage.setItem('teamRadio', JSON.stringify(teamRadioData));
+            // sessionStorage.setItem('weather', JSON.stringify(weatherData));
+            sessionStorage.setItem('stints', JSON.stringify(stintData));
+            sessionStorage.setItem('laps', JSON.stringify(lapData));
+            // sessionStorage.setItem('intervals', JSON.stringify(intervalData));
+            sessionStorage.setItem('positions', JSON.stringify(positionData));
+
+
+
+
+
 
 
             setIsLoading(false)
@@ -195,6 +226,31 @@ const SessionContent = () => {
 
             setSelectedDrivers(obj)
         }
+
+
+
+        const cachedSession = sessionStorage.getItem('session');
+        const cachedDrivers = sessionStorage.getItem('drivers');
+        const cachedRaceControl = sessionStorage.getItem('raceControl');
+        //const cachedTeamRadio = sessionStorage.getItem('teamRadio');
+        const cachedWeather = sessionStorage.getItem('weather');
+        const cachedStints = sessionStorage.getItem('stints');
+        const cachedLaps = sessionStorage.getItem('laps');
+        const cachedIntervals = sessionStorage.getItem('intervals');
+        const cachedPositions = sessionStorage.getItem('positions');
+
+
+        // if (cachedMeeting) setMeeting(JSON.parse(cachedMeeting));
+        if (cachedSession) setSessionData(JSON.parse(cachedSession));
+        if (cachedDrivers) setDriverData(JSON.parse(cachedDrivers));
+        if (cachedRaceControl) setRaceControlData(JSON.parse(cachedRaceControl));
+        // if (cachedTeamRadio) setTeamRadio(JSON.parse(cachedTeamRadio));
+        // if (cachedWeather) setWeatherData(JSON.parse(cachedWeather));
+        if (cachedStints) setStintData(JSON.parse(cachedStints));
+        if (cachedLaps) setLapData(JSON.parse(cachedLaps));
+        // if (cachedIntervals) setIntervalData(JSON.parse(cachedIntervals));
+        if (cachedPositions) setPositionData(JSON.parse(cachedPositions));
+
 
         if (mode === "development") {
             fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]) => {
@@ -219,7 +275,7 @@ const SessionContent = () => {
 
         }
 
-    }, []);
+    }, [session_key]);
 
     return (
         <>
@@ -262,9 +318,24 @@ const SessionContent = () => {
                     width: '100%'
                 }}>
                 <Col span={24}>
-                    <StintGraph data={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
+                    <StintGraph stintData={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
 
 
+                </Col>
+            </Row>
+
+            <Row
+                gutter={[32, 32]}
+                style={{
+                    marginTop: '32px',
+                    width: '100%'
+                }}>
+                <Col span={24}>
+                    <PositionGraph
+                        positionData={positionData}
+                        lapData={lapData}
+                        driverAcronym={driverAcronym}
+                        isLoading={isLoading} />
                 </Col>
             </Row>
 

@@ -58,7 +58,7 @@ const EventCard = forwardRef<EventCardRef, EventCardProps>((props, ref) => {
                         gap: '8px'
                     }}
                 >
-                    {/* <InfoCircleOutlined /> */}
+                    <InfoCircleOutlined />
                     <CustomText size="sm" style={{ marginLeft: '0.5rem' }}>
                         Race Events
                     </CustomText>
