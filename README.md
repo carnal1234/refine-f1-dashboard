@@ -44,7 +44,7 @@ To run the project
     
 ## Demo
 
-[Here](https://refine-f1-dashboard-122abq912-tszs-projects.vercel.app) is the project deployed on Vercel.
+[Here](https://refine-f1-dashboard.vercel.app/) is the project deployed on Vercel.
 
 Keep in mind that OpenF1 is under development and race data is only available between 2023 - 2024.
 
