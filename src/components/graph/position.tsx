@@ -6,9 +6,11 @@ import { FieldTimeOutlined } from '@ant-design/icons';
 import { Text as CustomText } from '../common';
 import { Flex, Spin } from "antd";
 import { Datum } from "@ant-design/charts";
-import { LapParams, PositionParams } from '@/interfaces/openf1';
+import { DriverParams, LapParams, PositionParams } from '@/interfaces/openf1';
 import { groupBy } from '@/utilities/helper';
 import dayjs from 'dayjs'
+
+import { LegendItem, TooltipItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
 
 
 interface StaringGridMap {
@@ -18,10 +20,11 @@ interface StaringGridMap {
 export const PositionGraph = (props: {
     positionData: Array<PositionParams>,
     lapData: Array<LapParams>,
+    driverTeamColorMap: any,
     driverAcronym: any,
+    selectedDrivers: Record<string, boolean>,
     isLoading: boolean
 }) => {
-
 
 
 
@@ -29,18 +32,23 @@ export const PositionGraph = (props: {
     const positionDataGroupByDate = positionDataSortByDate ? groupBy(positionDataSortByDate, i => i.date!) : []
     const lapDataGroupByDriver = groupBy(props.lapData.sort((a, b) => a.lap_number! - b.lap_number!), i => i.driver_number?.toString()!)
 
+    const lastLap = props.lapData[props.lapData.length - 1]?.lap_number
 
     const GetLapFromDateAndDriverNumber = function (driver_number: string, date: string): number {
-        if (lapDataGroupByDriver?.length) {
+
+        if (lapDataGroupByDriver) {
             let arr = lapDataGroupByDriver[driver_number]
-            let data = arr?.find((e: LapParams) => e.date_start && e.date_start >= date)
 
+
+
+            let data = arr?.find((e: LapParams) => e.date_start && dayjs(e.date_start).isAfter(dayjs(date)))
             return data && data.lap_number ? data.lap_number : -1
-
         } else {
             return -1
         }
     }
+
+
 
 
 
@@ -52,11 +60,13 @@ export const PositionGraph = (props: {
         return obj;
     }, {});
 
+
     //Convert Data for graph
     let positionMap = { ...startingGrid }
     let updatedPositionDataArr = []
     let dateLapMapping = new Map<string, number>()
     for (const [date, positionDataArr] of Object.entries(positionDataGroupByDate)) {
+
         //Update Position
         const session_key = positionDataArr[0].session_key
         const meeting_key = positionDataArr[0].meeting_key
@@ -68,6 +78,7 @@ export const PositionGraph = (props: {
 
         //Create Position of All Driver at Specfic Date
         for (const [driver_number, position] of Object.entries(positionMap)) {
+
             let lap = GetLapFromDateAndDriverNumber(driver_number, date)
 
             if (position === 1) dateLapMapping.set(date, lap)
@@ -88,6 +99,20 @@ export const PositionGraph = (props: {
 
     }
 
+    const lastDate = updatedPositionDataArr[updatedPositionDataArr.length - 1].date
+
+    const finishOrder = updatedPositionDataArr.filter(e => e.date === lastDate).sort((a, b) => a.position - b.position)
+
+    const customLegendItem: LegendItem[] = finishOrder.map(i => {
+        let color = props.driverTeamColorMap[parseInt(i.driver_number)]
+
+        return {
+            name: i.driver_number,
+            value: i.position,
+            marker: { symbol: 'circle', style: { fill: `#${color}`, r: 5 } },
+            unchecked: !props.selectedDrivers[parseInt(i.driver_number)]
+        }
+    })
 
 
     const config: LineConfig = {
@@ -97,10 +122,16 @@ export const PositionGraph = (props: {
         isStack: false,
         seriesField: "driver_number",
         autoFit: true,
+        color(datum, defaultColor) {
+            let color = props.driverTeamColorMap[parseInt(datum.driver_number)]
+            return color ? `#${color}` : defaultColor!
+        },
 
         yAxis: {
             label: {
-                formatter: (v) => v
+                formatter: (v) => v,
+
+
             },
             title: {
                 text: "位置",
@@ -108,7 +139,13 @@ export const PositionGraph = (props: {
                 position: "center",
                 autoRotate: true,
             },
+
             min: 1,
+            minLimit: 1,
+            max: 20,
+            tickCount: 2
+
+
             // max: props.driverAcronym.length,
 
             // range: [1, 20]
@@ -142,10 +179,19 @@ export const PositionGraph = (props: {
             },
 
 
+            custom: true,
+
+            items: customLegendItem,
+            selected: props.selectedDrivers,
+
+
+
+
         },
         tooltip: {
             title: (title: string, datum: Datum) => {
-                return `第 ${datum.lap_number} 圈`
+                //console.log(datum)
+                return `第 ${datum.lap_number} 圈位置`
             },
             fields: ['driver_number', 'lap_number', 'date', 'position'],
 
@@ -156,8 +202,15 @@ export const PositionGraph = (props: {
                     name: name,
                     value: `${datum.position}`
                 }
+            },
+            customItems: (originalItems: TooltipItem[]) => {
+                return originalItems.sort((a, b) => parseInt(a.value.toString()) - parseInt(b.value.toString()))
             }
         },
+        interactions: [{
+            type: "legend-filter",
+            enable: false,
+        }],
 
     };
 

@@ -1,6 +1,6 @@
 import { useCustom, useApiUrl } from "@refinedev/core";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Flex, Row, Col, Spin } from "antd";
+import { Flex, Row, Col, Spin, TabsProps, Tabs } from "antd";
 
 import { ListItemProps } from "antd/lib/list";
 
@@ -33,6 +33,7 @@ import DriverAvatarGroup from "@/components/driver-avatar-group";
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
 import EventCard, { EventCardRef } from "@/components/event-card";
 import { PositionGraph } from "@/components/graph/position";
+import TabPane from "antd/es/tabs/TabPane";
 
 
 
@@ -78,6 +79,27 @@ const SessionContent = () => {
 
 
 
+    const tabItems: TabsProps['items'] = [
+        {
+            key: '1',
+            label: 'Race Pace',
+            children: 'Content of Tab Pane 1',
+        },
+        {
+            key: '2',
+            label: 'Tab 2',
+            children: 'Content of Tab Pane 2',
+        },
+        {
+            key: '3',
+            label: 'Tab 3',
+            children: 'Content of Tab Pane 3',
+        },
+    ];
+
+
+
+
     const toggleDriverSelect = async (driver: DriverParams) => {
 
         if (!driver) return;
@@ -104,6 +126,12 @@ const SessionContent = () => {
     const driverAcronym = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
         let key = driver_number?.toString()!
         if (!driversSoFar[key]) driversSoFar[key] = name_acronym!;
+        return driversSoFar;
+    }, {});
+
+    const driverTeamColorMap = driverData.reduce((driversSoFar: CustomMap, { driver_number, team_colour }) => {
+        let key = driver_number?.toString()!
+        if (!driversSoFar[key]) driversSoFar[key] = team_colour!;
         return driversSoFar;
     }, {});
 
@@ -221,7 +249,7 @@ const SessionContent = () => {
             let obj: Record<string, boolean> = {}
 
             driverData.map((d: DriverParams) => {
-                if (d.driver_number) obj[d.driver_number?.toString()] = true
+                if (d.driver_number) obj[d.driver_number?.toString()] = false
             })
 
             setSelectedDrivers(obj)
@@ -285,59 +313,74 @@ const SessionContent = () => {
             <div style={{ margin: '1rem', padding: '8px 16px' }}>
                 <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
             </div>
-            <Row
-                gutter={[32, 32]}
-                style={{
-                    marginTop: '32px',
-                    width: '100%'
-                }}>
-                <Col span={18}>
-                    <RacePaceGraph
-                        pitData={pitData}
-                        stintData={stintData}
-                        raceControlData={raceControlData}
-                        data={lapData}
-                        driverData={driverData}
-                        driverAcronym={driverAcronym}
-                        isLoading={isLoading}
-                        selectedDrivers={selectedDrivers}
-                        onToolTipChange={onRacePaceToolTipChange}
-                    />
 
-                </Col>
-                <Col span={6}  >
-                    <EventCard dataList={raceControlData} ref={raceControlRef} driverAcronym={driverAcronym} />
+            <Tabs>
+                <TabPane tab="Race Pace" key="1">
+                    <Row
+                        gutter={[32, 32]}
+                        style={{
+                            marginTop: '32px',
+                            width: '100%'
+                        }}>
+                        <Col span={18}>
+                            <RacePaceGraph
+                                pitData={pitData}
+                                stintData={stintData}
+                                raceControlData={raceControlData}
+                                data={lapData}
+                                driverData={driverData}
+                                driverAcronym={driverAcronym}
+                                isLoading={isLoading}
+                                selectedDrivers={selectedDrivers}
+                                onToolTipChange={onRacePaceToolTipChange}
+                            />
 
-                </Col>
-            </Row>
+                        </Col>
+                        <Col span={6}  >
+                            <EventCard dataList={raceControlData} ref={raceControlRef} driverAcronym={driverAcronym} />
 
-            <Row
-                gutter={[32, 32]}
-                style={{
-                    marginTop: '32px',
-                    width: '100%'
-                }}>
-                <Col span={24}>
-                    <StintGraph stintData={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
+                        </Col>
+                    </Row>
+                </TabPane>
+                <TabPane tab="Stint" key="2">
+                    <Row
+                        gutter={[32, 32]}
+                        style={{
+                            marginTop: '32px',
+                            width: '100%'
+                        }}>
+                        <Col span={24}>
+                            <StintGraph stintData={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
 
 
-                </Col>
-            </Row>
+                        </Col>
+                    </Row>
+                </TabPane>
+                <TabPane tab="Position" key="3">
+                    <Row
+                        gutter={[32, 32]}
+                        style={{
+                            marginTop: '32px',
+                            width: '100%'
+                        }}>
+                        <Col span={24}>
+                            <PositionGraph
+                                positionData={positionData}
+                                lapData={lapData}
+                                driverTeamColorMap={driverTeamColorMap}
+                                driverAcronym={driverAcronym}
+                                selectedDrivers={selectedDrivers}
+                                isLoading={isLoading} />
+                        </Col>
+                    </Row>
+                </TabPane>
+            </Tabs>
 
-            <Row
-                gutter={[32, 32]}
-                style={{
-                    marginTop: '32px',
-                    width: '100%'
-                }}>
-                <Col span={24}>
-                    <PositionGraph
-                        positionData={positionData}
-                        lapData={lapData}
-                        driverAcronym={driverAcronym}
-                        isLoading={isLoading} />
-                </Col>
-            </Row>
+
+
+
+
+
 
 
 

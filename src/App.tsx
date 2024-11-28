@@ -33,7 +33,7 @@ import "@refinedev/antd/dist/reset.css";
 import { DriverList } from "../src/pages/drivers";
 import { SessionList, SessionPage } from "../src/pages/races";
 import { DashboardPage } from "../src/pages/dashboard";
-
+import { HomePage } from "@/pages/home";
 
 import StandingTable from "./pages/standing/standing-table";
 
@@ -187,15 +187,14 @@ const App: React.FC = () => {
             dataProvider={dataProvider(API_URL)}
             routerProvider={routerProvider}
             resources={[
-              // {
-              //   name: "dashboard",
-              //   list: "/",
-              //   meta: {
-              //     label: "Dashboard",
-              //     // @ts-expect-error Ant Design Icon's v5.0.1 has an issue with @types/react@^18.2.66
-              //     icon: <DashboardOutlined />,
-              //   },
-              // },
+              {
+                name: "Home",
+                list: "/",
+                meta: {
+                  label: "Home",
+                  icon: <DashboardOutlined />,
+                },
+              },
               {
                 name: "standing",
                 list: "/standings",
@@ -231,7 +230,7 @@ const App: React.FC = () => {
                   <CustomThemeLayout />
                 }
               >
-                <Route index element={<DashboardPage />} />
+                <Route index element={<HomePage />} />
                 <Route path="/sessions">
                   <Route index element={<SessionList />} />
                   <Route path="show/:session_key" element={<SessionPage />} />

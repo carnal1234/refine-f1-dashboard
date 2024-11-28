@@ -1,13 +1,15 @@
-import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect } from 'react'
+import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect, SetStateAction } from 'react'
 import { Line, LineConfig, Bar, BarConfig, ColumnConfig, Plot, G2 } from '@ant-design/plots'
 
-import { Card, Typography } from "antd";
+import { Button, Card, Slider, Typography } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
 import { Text as CustomText } from '../common';
 import { Flex, Spin } from "antd";
 import { Datum } from "@ant-design/charts";
 
 import { LegendItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
+
+import { ListItem } from '@antv/g2plot/node_modules/@antv/component/lib/types'
 
 import { DriverParams, LapParams, RaceControlParams, StintParams, PitParams } from '@/interfaces/openf1';
 
@@ -37,7 +39,13 @@ interface RacePaceGraphProp {
 
 export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
-    const chartRef = useRef(null)
+    const [showOutlier, setShowOutlier] = useState(false)
+    const [outlierThreshold, setOutlierThreshold] = useState(110);
+
+    const onSliderChange = (v: SetStateAction<number>) => setOutlierThreshold(v)
+
+
+    const chartRef = useRef<any>(null)
 
     const graphHeight = 500
 
@@ -58,6 +66,29 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
 
+
+    //Calculate median 
+    function CalcMinMax(someArray: any[]): any {
+
+        if (someArray.length < 4)
+            return someArray;
+
+        let values, maxValue, minValue;
+
+        values = someArray.slice().sort((a, b) => a - b);//copy array fast and sort
+
+        minValue = values[0]
+        maxValue = values[values.length - 1]
+
+        return { minValue: minValue, maxValue: maxValue }
+    }
+
+    //const fastest_lap = lapData.map(x => )
+
+
+    const minMax = CalcMinMax(lapData.map(x => x.lap_duration))
+
+
     const lapDataWithStint: any = lapData.map(data => {
         let lap = data.lap_number!
         let driver_number = data.driver_number!
@@ -66,6 +97,12 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         return Object.assign(data, { stint: stint });
 
     })
+
+    const data = showOutlier ? lapDataWithStint : lapDataWithStint.filter((x: { lap_duration: number; }) => x.lap_duration >= minMax.minValue && x.lap_duration <= minMax.minValue * outlierThreshold / 100)
+
+
+
+
     const getSafetyCarAnnotation = (data: Array<RaceControlParams>): Annotation[] => {
 
         const filter_data = data.filter(i => i.category === "SafetyCar")
@@ -135,10 +172,13 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     </li>`
 
+    const toggleOutlier = function () {
+        setShowOutlier(!showOutlier)
 
+    }
 
     const lineConfig: LineConfig = {
-        data: lapDataWithStint,
+        data: data,
         xField: "lap_number",
         yField: "lap_duration",
         isStack: false,
@@ -179,9 +219,18 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
                 }
             },
+            itemValue: {
+                formatter: (text: string, item: ListItem, index: number) => { return text }
+            },
             selected: props.selectedDrivers,
 
+
         },
+        interactions: [{
+            type: "legend-filter",
+            enable: false,
+        }],
+
         tooltip: {
             title: (title: string, datum: Datum) => {
                 return `第 ${datum.lap_number} 圈`
@@ -228,8 +277,17 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 let lap: number = data?.data.lap_number
                 props.onToolTipChange(lap)
             })
+
+            chart.on('legend-item:click', (ev: any) => {
+                let target = ev.g2
+            })
+
+
+
         },
+
     };
+
 
 
 
@@ -256,6 +314,9 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 </div>
             }
         >
+            <Button type="primary" onClick={toggleOutlier}> {showOutlier ? `Hide Outlier (>= ${outlierThreshold}%)` : `Show Outlier (>= ${outlierThreshold}%)`} </Button>
+            <Slider defaultValue={outlierThreshold} disabled={false} min={110} max={200} onChange={onSliderChange} />
+
             {props.isLoading ? (
                 <Flex align="center" gap="middle" justify="center">
                     <Spin size="large" />
