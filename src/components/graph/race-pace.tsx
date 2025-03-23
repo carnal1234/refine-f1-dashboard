@@ -1,4 +1,4 @@
-import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect, SetStateAction } from 'react'
+import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect, SetStateAction, useMemo, useCallback } from 'react'
 import { Line, LineConfig, Bar, BarConfig, ColumnConfig, Plot, G2 } from '@ant-design/plots'
 
 import { Button, Card, Slider, Typography } from "antd";
@@ -23,6 +23,19 @@ import { getCompoundComponent } from '../common/tyre';
 
 import { renderToString } from 'react-dom/server';
 
+import PropTypes from 'prop-types';
+
+interface ChartRef {
+    getChart: () => any;
+    // Add other methods as needed
+}
+
+interface RacePaceState {
+    showOutlier: boolean;
+    outlierThreshold: number;
+    error: Error | null;
+}
+
 interface RacePaceGraphProp {
     data: Array<LapParams>,
     driverData: Array<DriverParams>,
@@ -35,17 +48,42 @@ interface RacePaceGraphProp {
     onToolTipChange: (lap: number) => void
 }
 
-
-
 export const RacePaceGraph = (props: RacePaceGraphProp) => {
+    const [state, setState] = useState<RacePaceState>({
+        showOutlier: false,
+        outlierThreshold: 110,
+        error: null
+    });
 
-    const [showOutlier, setShowOutlier] = useState(false)
-    const [outlierThreshold, setOutlierThreshold] = useState(110);
+    const chartRef = useRef<ChartRef>(null);
 
-    const onSliderChange = (v: SetStateAction<number>) => setOutlierThreshold(v)
+    // Memoize expensive computations
+    const processedLapData = useMemo(() => {
+        try {
+            return props.data
+                .filter((i: LapParams) => i.lap_duration !== null)
+                .map(data => {
+                    const lap = data.lap_number!;
+                    const driver_number = data.driver_number!;
+                    const stint = props.stintData
+                        .filter(s => s.driver_number === driver_number)
+                        .find(i => i.lap_start && i.lap_end && lap >= i.lap_start && lap <= i.lap_end);
+                    return { ...data, stint };
+                });
+        } catch (err) {
+            setState(prev => ({ ...prev, error: err as Error }));
+            return [];
+        }
+    }, [props.data, props.stintData]);
 
+    // Memoize callback functions
+    const onSliderChange = useCallback((v: SetStateAction<number>) => {
+        setState(prev => ({ ...prev, outlierThreshold: v as number }));
+    }, []);
 
-    const chartRef = useRef<any>(null)
+    const toggleOutlier = useCallback(() => {
+        setState(prev => ({ ...prev, showOutlier: !prev.showOutlier }));
+    }, []);
 
     const graphHeight = 500
 
@@ -98,7 +136,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     })
 
-    const data = showOutlier ? lapDataWithStint : lapDataWithStint.filter((x: { lap_duration: number; }) => x.lap_duration >= minMax.minValue && x.lap_duration <= minMax.minValue * outlierThreshold / 100)
+    const data = state.showOutlier ? lapDataWithStint : lapDataWithStint.filter((x: { lap_duration: number; }) => x.lap_duration >= minMax.minValue && x.lap_duration <= minMax.minValue * state.outlierThreshold / 100)
 
 
 
@@ -171,11 +209,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     <span style="display: inline-block; margin-left: 10px; float:right;"><strong style="font-style:italic; color:red;">{isPit}</strong></span>
 
     </li>`
-
-    const toggleOutlier = function () {
-        setShowOutlier(!showOutlier)
-
-    }
 
     const lineConfig: LineConfig = {
         data: data,
@@ -288,11 +321,9 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     };
 
-
-
-
-
-
+    if (state.error) {
+        return <div role="alert" className="error-container">An error occurred: {state.error.message}</div>;
+    }
 
     return (
         <Card
@@ -314,8 +345,22 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 </div>
             }
         >
-            <Button type="primary" onClick={toggleOutlier}> {showOutlier ? `Hide Outlier (>= ${outlierThreshold}%)` : `Show Outlier (>= ${outlierThreshold}%)`} </Button>
-            <Slider defaultValue={outlierThreshold} disabled={false} min={110} max={200} onChange={onSliderChange} />
+            <Button
+                type="primary"
+                onClick={toggleOutlier}
+                aria-label="Toggle outlier display"
+                role="switch"
+                aria-checked={state.showOutlier}
+            >
+                {state.showOutlier ? `Hide Outlier (>= ${state.outlierThreshold}%)` : `Show Outlier (>= ${state.outlierThreshold}%)`}
+            </Button>
+            <Slider
+                value={state.outlierThreshold}
+                onChange={onSliderChange}
+                min={110}
+                max={200}
+                aria-label="Outlier threshold adjustment"
+            />
 
             {props.isLoading ? (
                 <Flex align="center" gap="middle" justify="center">
@@ -325,9 +370,25 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 <Line {...lineConfig} height={graphHeight} ref={chartRef} />
             )}
         </Card>
+    );
+};
 
-    )
-}
+// Add prop types validation
+RacePaceGraph.propTypes = {
+    data: PropTypes.arrayOf(PropTypes.shape({
+        lap_duration: PropTypes.number,
+        lap_number: PropTypes.number.isRequired,
+        driver_number: PropTypes.number.isRequired
+    })).isRequired,
+    driverData: PropTypes.array.isRequired,
+    stintData: PropTypes.array.isRequired,
+    raceControlData: PropTypes.array.isRequired,
+    pitData: PropTypes.array.isRequired,
+    driverAcronym: PropTypes.object.isRequired,
+    isLoading: PropTypes.bool.isRequired,
+    selectedDrivers: PropTypes.object.isRequired,
+    onToolTipChange: PropTypes.func.isRequired
+};
 
 
 
