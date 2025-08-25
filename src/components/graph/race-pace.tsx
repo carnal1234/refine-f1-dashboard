@@ -1,14 +1,13 @@
-import { forwardRef, Ref, useImperativeHandle, useRef, useState, useEffect, SetStateAction, useMemo, useCallback } from 'react'
-import { Line, LineConfig, Bar, BarConfig, ColumnConfig, Plot, G2 } from '@ant-design/plots'
+import { useRef, useState, SetStateAction, useCallback } from 'react'
+import { Line, LineConfig } from '@ant-design/plots'
 
-import { Button, Card, Slider, Typography } from "antd";
+import { Button, Card, Slider } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
 import { Text as CustomText } from '../common';
 import { Flex, Spin } from "antd";
 import { Datum } from "@ant-design/charts";
 
 import { LegendItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
-
 import { ListItem } from '@antv/g2plot/node_modules/@antv/component/lib/types'
 
 import { DriverParams, LapParams, RaceControlParams, StintParams, PitParams } from '@/interfaces/openf1';
@@ -56,25 +55,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     });
 
     const chartRef = useRef<ChartRef>(null);
-
-    // Memoize expensive computations
-    const processedLapData = useMemo(() => {
-        try {
-            return props.data
-                .filter((i: LapParams) => i.lap_duration !== null)
-                .map(data => {
-                    const lap = data.lap_number!;
-                    const driver_number = data.driver_number!;
-                    const stint = props.stintData
-                        .filter(s => s.driver_number === driver_number)
-                        .find(i => i.lap_start && i.lap_end && lap >= i.lap_start && lap <= i.lap_end);
-                    return { ...data, stint };
-                });
-        } catch (err) {
-            setState(prev => ({ ...prev, error: err as Error }));
-            return [];
-        }
-    }, [props.data, props.stintData]);
 
     // Memoize callback functions
     const onSliderChange = useCallback((v: SetStateAction<number>) => {
@@ -148,7 +128,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         let isSafetyCarDeployed = false
         let safetyCarOutLap: number | undefined = 0
         let safetyCarInLap: number | undefined = 99
-
         let annotations: Annotation[] = []
 
         filter_data.map(d => {
@@ -170,19 +149,12 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
                             direction: 'upward'
                         }
-
                     )
-
                 }
-
-
-
-
             }
             else if (d.message === "SAFETY CAR IN THIS LAP") {
                 isSafetyCarDeployed = false
                 safetyCarInLap = d.lap_number
-
                 if (safetyCarOutLap && safetyCarInLap) {
                     annotations.push(
                         {
@@ -193,10 +165,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                         }
                     )
                 }
-
-
             }
-
         })
         return annotations
     }
@@ -212,6 +181,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     const lineConfig: LineConfig = {
         data: data,
+        theme: 'dark',
         xField: "lap_number",
         yField: "lap_duration",
         isStack: false,
@@ -256,8 +226,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 formatter: (text: string, item: ListItem, index: number) => { return text }
             },
             selected: props.selectedDrivers,
-
-
         },
         interactions: [{
             type: "legend-filter",
@@ -270,11 +238,11 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
             },
             fields: ['driver_number', 'lap_number', 'lap_duration', 'stint'],
             formatter: (datum: Datum) => {
-                let driverNumber = datum.driver_number
-                let name = props.driverAcronym[driverNumber] ? (driverNumber + " " + props.driverAcronym[driverNumber]) : driverNumber
-                // let stint = stintDataGroupById[driverNumber].filter(s => s.)
-                let stintCompoundSVG = renderToString(getCompoundComponent(datum.stint.compound))
-                let pitData = pitDataGroupById[driverNumber]
+                const driverNumber = datum.driver_number
+                const name = props.driverAcronym[driverNumber] ? (driverNumber + " " + props.driverAcronym[driverNumber]) : driverNumber
+                const compound = datum.stint?.compound
+                const stintCompoundSVG = compound ? renderToString(getCompoundComponent(compound)) : ""
+                const pitData = pitDataGroupById[driverNumber]
                 let isPit = pitData?.some(i => i.lap_number === datum.lap_number) ? "In Pit" : ""
                 isPit = pitData?.some(i => i.lap_number === datum.lap_number - 1) ? "Out Lap" : isPit
                 return {

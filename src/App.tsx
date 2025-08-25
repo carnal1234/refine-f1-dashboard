@@ -26,7 +26,7 @@ import routerProvider, {
   DocumentTitleHandler,
 } from "@refinedev/react-router-v6";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import { App as AntdApp, ConfigProvider } from "antd";
+import { App as AntdApp, ConfigProvider, theme } from "antd";
 
 import "@refinedev/antd/dist/reset.css";
 
@@ -180,7 +180,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <ConfigProvider theme={RefineThemes.Blue}>
+      <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }} >
         <AntdApp>
           <Refine
             // authProvider={authProvider}
@@ -264,7 +264,7 @@ const App: React.FC = () => {
           </Refine>
         </AntdApp>
       </ConfigProvider>
-    </BrowserRouter>
+    </BrowserRouter >
   );
 };
 

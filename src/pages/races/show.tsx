@@ -19,7 +19,7 @@ import { Card, Typography } from "antd";
 
 
 import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams } from "../../interfaces/openf1";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
 import { Datum } from "@ant-design/charts";
@@ -33,10 +33,8 @@ import DriverAvatarGroup from "@/components/driver-avatar-group";
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
 import EventCard, { EventCardRef } from "@/components/event-card";
 import { PositionGraph } from "@/components/graph/position";
+import { fetchDrivers, fetchSession, fetchLaps, fetchStint, fetchPosition, fetchRaceControl, fetchPit } from "@/services/openF1Api";
 import TabPane from "antd/es/tabs/TabPane";
-
-
-
 
 
 const { Title, Text } = Typography;
@@ -76,35 +74,9 @@ const SessionContent = () => {
 
     const raceControlRef = useRef<EventCardRef>(null);
 
-
-
-
-    const tabItems: TabsProps['items'] = [
-        {
-            key: '1',
-            label: 'Race Pace',
-            children: 'Content of Tab Pane 1',
-        },
-        {
-            key: '2',
-            label: 'Tab 2',
-            children: 'Content of Tab Pane 2',
-        },
-        {
-            key: '3',
-            label: 'Tab 3',
-            children: 'Content of Tab Pane 3',
-        },
-    ];
-
-
-
-
     const toggleDriverSelect = async (driver: DriverParams) => {
-
         if (!driver) return;
-
-        let driver_no = driver.driver_number?.toString()!
+        const driver_no = driver.driver_number?.toString()!
         if (driver_no && selectedDrivers.hasOwnProperty(driver_no)) {
             let value = !selectedDrivers[driver_no]
             setSelectedDrivers({ ...selectedDrivers, [driver_no]: value })
@@ -116,12 +88,6 @@ const SessionContent = () => {
             if (raceControlRef && raceControlRef.current) raceControlRef.current.updateLap(lap_number)
         }
     }
-
-
-
-
-
-
 
     const driverAcronym = driverData.reduce((driversSoFar: CustomMap, { driver_number, name_acronym }) => {
         let key = driver_number?.toString()!
@@ -135,49 +101,20 @@ const SessionContent = () => {
         return driversSoFar;
     }, {});
 
-
-
-
-    const maxLap = Math.max(...stintData.map(d => d.lap_end!), 0);
-
-
-
-
     useEffect(() => {
         const mode = import.meta.env.MODE
-
-
-
-
-
-
-
-
-
-
         async function fetchAllData() {
-            const [driverResponse, sessionResponse, lapResponse, stintResponse, positionResponse, raceControlResponse, pitResponse] = await Promise.all([
-                fetch(`${apiUrl}/drivers?session_key=${session_key}`),
-                fetch(`${apiUrl}/sessions?session_key=${session_key}`),
-                fetch(`${apiUrl}/laps?session_key=${session_key}`),
-                fetch(`${apiUrl}/stints?session_key=${session_key}`),
-                fetch(`${apiUrl}/position?session_key=${session_key}`),
-                fetch(`${apiUrl}/race_control?session_key=${session_key}`),
-                fetch(`${apiUrl}/pit?session_key=${session_key}`),
+            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
+                fetchDrivers({ session_key }),
+                fetchSession({ session_key }),
+                fetchLaps({ session_key }),
+                fetchStint({ session_key }),
+                fetchPosition({ session_key }),
+                fetchRaceControl({ session_key }),
+                fetchPit({ session_key }),
             ]);
-
-            const driverData = await driverResponse.json();
-            const sessionData = await sessionResponse.json();
-            const lapData = await lapResponse.json();
-            const stintData = await stintResponse.json();
-            const positionData = await positionResponse.json();
-            const raceControlData = await raceControlResponse.json()
-            const pitData = await pitResponse.json()
             return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData];
         }
-
-
-
         async function fetchMockData() {
             const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
                 await import('@/data/driver.json'),
@@ -238,21 +175,15 @@ const SessionContent = () => {
             // sessionStorage.setItem('intervals', JSON.stringify(intervalData));
             sessionStorage.setItem('positions', JSON.stringify(positionData));
 
-
-
-
-
-
-
             setIsLoading(false)
 
-            let obj: Record<string, boolean> = {}
+            let selectedDrivers: Record<string, boolean> = {}
 
             driverData.map((d: DriverParams) => {
-                if (d.driver_number) obj[d.driver_number?.toString()] = false
+                if (d.driver_number) selectedDrivers[d.driver_number?.toString()] = true
             })
 
-            setSelectedDrivers(obj)
+            setSelectedDrivers(selectedDrivers)
         }
 
 
@@ -305,10 +236,18 @@ const SessionContent = () => {
 
     }, [session_key]);
 
+    const title = useCallback(() => {
+        const country = sessionData[0]?.country_name
+        const sessionType = sessionData[0]?.session_type
+        return country && sessionType ? `${country} ${sessionType} Data` : null
+
+    }, [sessionData])
+
+
     return (
         <>
             <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
-                {sessionData[0]?.country_name} {sessionData[0]?.session_type} Data
+                {title()}
             </CustomText>
             <div style={{ margin: '1rem', padding: '8px 16px' }}>
                 <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
