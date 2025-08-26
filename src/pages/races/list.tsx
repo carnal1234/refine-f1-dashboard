@@ -91,7 +91,7 @@ export const SessionList = () => {
                         <Space>
                             <ShowButton
                                 onClick={() => {
-                                    navigate(`/sessions/show/session_key=${record.session_key}&meeting_key=${record.meeting_key}`);
+                                    navigate(`/sessions/show/race?session_key=${record.session_key}&meeting_key=${record.meeting_key}`);
                                 }}
                                 // onClick={() => {
                                 //     go({

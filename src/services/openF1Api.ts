@@ -32,7 +32,8 @@ import {
         if (dateRangeParams.date_lt) url += `&date<=${dateRangeParams.date_lt}`;
       }
   
-      const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      // const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
+      const response = await fetch(url)
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

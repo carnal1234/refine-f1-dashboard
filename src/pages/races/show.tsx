@@ -98,7 +98,13 @@ const SessionContent = () => {
     }, {});
 
     useEffect(() => {
-        const mode = import.meta.env.MODE
+        const mode = import.meta.env.MODE as string;
+        // const mode = "TEST"
+        // Skip fetching if either key is missing
+        if (session_key === undefined || meeting_key === undefined) {
+            setIsLoading(false);
+            return;
+        }
         async function fetchAllData() {
             const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData] = await Promise.all([
                 fetchDrivers({ session_key }),
@@ -189,31 +195,31 @@ const SessionContent = () => {
 
 
 
-        const cachedSession = sessionStorage.getItem('session');
-        const cachedDrivers = sessionStorage.getItem('drivers');
-        const cachedRaceControl = sessionStorage.getItem('raceControl');
-        //const cachedTeamRadio = sessionStorage.getItem('teamRadio');
-        const cachedWeather = sessionStorage.getItem('weather');
-        const cachedStints = sessionStorage.getItem('stints');
-        const cachedLaps = sessionStorage.getItem('laps');
-        const cachedIntervals = sessionStorage.getItem('intervals');
-        const cachedPositions = sessionStorage.getItem('positions');
-        const cachedMeeting = sessionStorage.getItem('meetings')
+        // const cachedSession = sessionStorage.getItem('session');
+        // const cachedDrivers = sessionStorage.getItem('drivers');
+        // const cachedRaceControl = sessionStorage.getItem('raceControl');
+        // //const cachedTeamRadio = sessionStorage.getItem('teamRadio');
+        // const cachedWeather = sessionStorage.getItem('weather');
+        // const cachedStints = sessionStorage.getItem('stints');
+        // const cachedLaps = sessionStorage.getItem('laps');
+        // const cachedIntervals = sessionStorage.getItem('intervals');
+        // const cachedPositions = sessionStorage.getItem('positions');
+        // const cachedMeeting = sessionStorage.getItem('meetings')
 
 
-        if (cachedMeeting) setMeetingData(JSON.parse(cachedMeeting));
-        if (cachedSession) setSessionData(JSON.parse(cachedSession));
-        if (cachedDrivers) setDriverData(JSON.parse(cachedDrivers));
-        if (cachedRaceControl) setRaceControlData(JSON.parse(cachedRaceControl));
-        // if (cachedTeamRadio) setTeamRadio(JSON.parse(cachedTeamRadio));
-        if (cachedWeather) setWeatherData(JSON.parse(cachedWeather));
-        if (cachedStints) setStintData(JSON.parse(cachedStints));
-        if (cachedLaps) setLapData(JSON.parse(cachedLaps));
-        // if (cachedIntervals) setIntervalData(JSON.parse(cachedIntervals));
-        if (cachedPositions) setPositionData(JSON.parse(cachedPositions));
+        // if (cachedMeeting) setMeetingData(JSON.parse(cachedMeeting));
+        // if (cachedSession) setSessionData(JSON.parse(cachedSession));
+        // if (cachedDrivers) setDriverData(JSON.parse(cachedDrivers));
+        // if (cachedRaceControl) setRaceControlData(JSON.parse(cachedRaceControl));
+        // // if (cachedTeamRadio) setTeamRadio(JSON.parse(cachedTeamRadio));
+        // if (cachedWeather) setWeatherData(JSON.parse(cachedWeather));
+        // if (cachedStints) setStintData(JSON.parse(cachedStints));
+        // if (cachedLaps) setLapData(JSON.parse(cachedLaps));
+        // // if (cachedIntervals) setIntervalData(JSON.parse(cachedIntervals));
+        // if (cachedPositions) setPositionData(JSON.parse(cachedPositions));
 
 
-        if (mode === "development") {
+        if (mode && mode.toLowerCase() === "development") {
             fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]) => {
                 setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData])
             }).catch(error => {
