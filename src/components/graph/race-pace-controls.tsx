@@ -32,11 +32,11 @@ export const RacePaceControls: React.FC<RacePaceControlsProps> = ({
                 max={200}
                 aria-label="Outlier threshold adjustment"
             />
-            <style jsx>{`
+            {/* <style jsx>{`
                 .race-pace-controls {
                     margin-bottom: 1rem;
                 }
-            `}</style>
+            `}</style> */}
         </div>
     );
 }; 

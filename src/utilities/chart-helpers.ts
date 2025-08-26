@@ -54,12 +54,11 @@ export function getSafetyCarAnnotations(data: RaceControlParams[]): Annotation[]
             annotations.push({
                 id: `safetyCar[${safetyCarOutLap} - ${safetyCarInLap}]`,
                 type: "region",
-                start: [safetyCarOutLap, 'min'],
-                end: [safetyCarInLap, 'max'],
+                start: [safetyCarOutLap ?? 0, 'min'],
+                end: [safetyCarInLap ?? 0, 'max'],
             });
         }
     });
-    
     return annotations;
 }
 

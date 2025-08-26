@@ -1,25 +1,12 @@
 import { useCustom, useApiUrl } from "@refinedev/core";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Flex, Row, Col, Spin, TabsProps, Tabs } from "antd";
 
 import { ListItemProps } from "antd/lib/list";
-
-
-
 import { Show, MarkdownField } from "@refinedev/antd";
-
 import { Card, Typography } from "antd";
-
-
-
-
-
-
-
-
-
-import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams } from "../../interfaces/openf1";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams, WeatherParams, MeetingParams } from "../../interfaces/openf1";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
 import { Datum } from "@ant-design/charts";
@@ -33,8 +20,9 @@ import DriverAvatarGroup from "@/components/driver-avatar-group";
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
 import EventCard, { EventCardRef } from "@/components/event-card";
 import { PositionGraph } from "@/components/graph/position";
-import { fetchDrivers, fetchSession, fetchLaps, fetchStint, fetchPosition, fetchRaceControl, fetchPit } from "@/services/openF1Api";
+import { fetchDrivers, fetchSession, fetchLaps, fetchStint, fetchPosition, fetchRaceControl, fetchPit, fetchWeather, fetchMeeting } from "@/services/openF1Api";
 import TabPane from "antd/es/tabs/TabPane";
+import DashboardHeader from "@/components/common/DashboardHeader";
 
 
 const { Title, Text } = Typography;
@@ -55,15 +43,23 @@ const SessionContent = () => {
     const apiUrl = useApiUrl();
 
 
-    const { session_key } = useParams();
+    // const { session_key } = useParams();
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const sessionKeyParam = params.get('session_key');
+    const meetingKeyParam = params.get('meeting_key')
 
+    const session_key = sessionKeyParam ? Number(sessionKeyParam) : undefined;
+    const meeting_key = meetingKeyParam ? Number(meetingKeyParam) : undefined;
     const [driverData, setDriverData] = useState<Array<DriverParams>>([]);
     const [sessionData, setSessionData] = useState<Array<SessionParams>>([]);
     const [lapData, setLapData] = useState<Array<LapParams>>([]);
     const [stintData, setStintData] = useState<Array<StintParams>>([]);
     const [positionData, setPositionData] = useState<Array<PositionParams>>([]);
     const [raceControlData, setRaceControlData] = useState<Array<RaceControlParams>>([]);
+    const [weatherData, setWeatherData] = useState<Array<WeatherParams>>([])
     const [pitData, setPitData] = useState<Array<PitParams>>([]);
+    const [meetingData, setMeetingData] = useState<Array<MeetingParams>>([])
     const [isLoading, setIsLoading] = useState(true);
 
     const {
@@ -104,7 +100,7 @@ const SessionContent = () => {
     useEffect(() => {
         const mode = import.meta.env.MODE
         async function fetchAllData() {
-            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
+            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData] = await Promise.all([
                 fetchDrivers({ session_key }),
                 fetchSession({ session_key }),
                 fetchLaps({ session_key }),
@@ -112,11 +108,14 @@ const SessionContent = () => {
                 fetchPosition({ session_key }),
                 fetchRaceControl({ session_key }),
                 fetchPit({ session_key }),
+                fetchWeather({ session_key }),
+                fetchMeeting({ meeting_key })
             ]);
-            return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData];
+            return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData];
         }
+        //Use For Development
         async function fetchMockData() {
-            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData] = await Promise.all([
+            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData] = await Promise.all([
                 await import('@/data/driver.json'),
                 await import('@/data/sessions.json'),
                 await import('@/data/lap.json'),
@@ -124,13 +123,14 @@ const SessionContent = () => {
                 await import('@/data/position.json'),
                 await import('@/data/race-control.json'),
                 await import('@/data/pit.json'),
-
+                await import('@/data/weather.json'),
+                await import('@/data/meeting.json')
             ]);
             return [driverData?.default, sessionData?.default, lapData?.default,
-            stintData?.default, positionData?.default, raceControlData?.default, pitData?.default];
+            stintData?.default, positionData?.default, raceControlData?.default, pitData?.default, weatherData?.default, meetingData?.default];
         }
 
-        const setAllData = ([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]: any) => {
+        const setAllData = ([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]: any) => {
             for (let item of driverData) {
                 item['driver_number'] = item['driver_number']?.toString()
             }
@@ -154,8 +154,6 @@ const SessionContent = () => {
                 item['driver_number'] = item['driver_number']?.toString()
             }
 
-
-
             setDriverData(driverData);
             setSessionData(sessionData);
             setLapData(lapData)
@@ -163,17 +161,20 @@ const SessionContent = () => {
             setPositionData(positionData)
             setRaceControlData(raceControlData)
             setPitData(pitData)
+            setWeatherData(weatherData)
+            setMeetingData(meetingData)
 
             // sessionStorage.setItem('session', JSON.stringify(meetingData));
             sessionStorage.setItem('session', JSON.stringify(sessionData));
             sessionStorage.setItem('driver', JSON.stringify(driverData));
             sessionStorage.setItem('raceControl', JSON.stringify(raceControlData));
             // sessionStorage.setItem('teamRadio', JSON.stringify(teamRadioData));
-            // sessionStorage.setItem('weather', JSON.stringify(weatherData));
+            sessionStorage.setItem('weather', JSON.stringify(weatherData));
             sessionStorage.setItem('stints', JSON.stringify(stintData));
             sessionStorage.setItem('laps', JSON.stringify(lapData));
             // sessionStorage.setItem('intervals', JSON.stringify(intervalData));
             sessionStorage.setItem('positions', JSON.stringify(positionData));
+            sessionStorage.setItem('meetingData', JSON.stringify(meetingData));
 
             setIsLoading(false)
 
@@ -197,14 +198,15 @@ const SessionContent = () => {
         const cachedLaps = sessionStorage.getItem('laps');
         const cachedIntervals = sessionStorage.getItem('intervals');
         const cachedPositions = sessionStorage.getItem('positions');
+        const cachedMeeting = sessionStorage.getItem('meetings')
 
 
-        // if (cachedMeeting) setMeeting(JSON.parse(cachedMeeting));
+        if (cachedMeeting) setMeetingData(JSON.parse(cachedMeeting));
         if (cachedSession) setSessionData(JSON.parse(cachedSession));
         if (cachedDrivers) setDriverData(JSON.parse(cachedDrivers));
         if (cachedRaceControl) setRaceControlData(JSON.parse(cachedRaceControl));
         // if (cachedTeamRadio) setTeamRadio(JSON.parse(cachedTeamRadio));
-        // if (cachedWeather) setWeatherData(JSON.parse(cachedWeather));
+        if (cachedWeather) setWeatherData(JSON.parse(cachedWeather));
         if (cachedStints) setStintData(JSON.parse(cachedStints));
         if (cachedLaps) setLapData(JSON.parse(cachedLaps));
         // if (cachedIntervals) setIntervalData(JSON.parse(cachedIntervals));
@@ -212,43 +214,41 @@ const SessionContent = () => {
 
 
         if (mode === "development") {
-            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]) => {
-
-                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData])
-
+            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData])
             }).catch(error => {
                 console.error(error)
-
             })
-
-
         } else {
-            fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData]) => {
-                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData])
-
+            fetchAllData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData])
             }).catch(error => {
                 console.error(error)
-
             })
-
-
         }
 
-    }, [session_key]);
+    }, [session_key, meeting_key]);
 
     const title = useCallback(() => {
         const country = sessionData[0]?.country_name
         const sessionType = sessionData[0]?.session_type
         return country && sessionType ? `${country} ${sessionType} Data` : null
-
     }, [sessionData])
-
 
     return (
         <>
-            <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
+            <DashboardHeader
+                trackTemperature={weatherData?.[0]?.track_temperature ?? 0}
+                airTemperature={weatherData?.[0]?.air_temperature ?? 0}
+                humidity={weatherData?.[0]?.humidity ?? 0}
+                rainfall={weatherData?.[0]?.rainfall ?? 0}
+                windSpeed={weatherData?.[0]?.wind_speed ?? 0}
+                meeting={meetingData?.[0] ?? null}
+                session={sessionData?.[0] ?? null}
+            />
+            {/* <CustomText size="lg" style={{ margin: '1rem', padding: '8px 16px' }}>
                 {title()}
-            </CustomText>
+            </CustomText> */}
             <div style={{ margin: '1rem', padding: '8px 16px' }}>
                 <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
             </div>

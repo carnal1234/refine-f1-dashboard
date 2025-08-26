@@ -14,6 +14,7 @@ import type { DriverParams, SessionParams } from "../../interfaces/openf1";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 import dayjs from 'dayjs'
 import { SetStateAction, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -23,6 +24,7 @@ export const SessionList = () => {
 
     const apiUrl = useApiUrl();
     const go = useGo();
+    const navigate = useNavigate();
 
 
 
@@ -87,15 +89,16 @@ export const SessionList = () => {
                     dataIndex="actions"
                     render={(value, record) => (
                         <Space>
-
-                            <ShowButton onClick={() => {
-                                go({
-                                    to: `/sessions/show/${record.session_key}`,
-                                    type: "push",
-                                });
-                            }}
-
-
+                            <ShowButton
+                                onClick={() => {
+                                    navigate(`/sessions/show/session_key=${record.session_key}&meeting_key=${record.meeting_key}`);
+                                }}
+                                // onClick={() => {
+                                //     go({
+                                //         to: `/sessions/show/session_key=${record.session_key}`,
+                                //         type: "push",
+                                //     });
+                                // }}
                                 hideText size="small" recordItemId={record.session_key} />
                         </Space>
                     )}
