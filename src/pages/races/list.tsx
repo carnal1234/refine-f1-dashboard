@@ -10,11 +10,13 @@ import {
 
 import { Table, Space, Select } from "antd";
 
-import type { DriverParams, SessionParams } from "../../interfaces/openf1";
+import { MeetingParams, type DriverParams, type SessionParams } from "../../interfaces/openf1";
 import { HttpError } from "../../../node_modules/@refinedev/core/dist/index";
 import dayjs from 'dayjs'
-import { SetStateAction, useEffect, useState } from "react";
+import { SetStateAction, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCountryCode } from "@/utilities/helper";
+import { fetchMeeting, fetchSession } from "@/services/openF1Api";
 
 
 
@@ -26,30 +28,81 @@ export const SessionList = () => {
     const go = useGo();
     const navigate = useNavigate();
 
-
-
-    const [sessionData, setSessionData] = useState([]);
+    const [sessionData, setSessionData] = useState<SessionParams[] | MeetingParams[]>([]);
+    const [meetingData, setMeetingData] = useState<MeetingParams[]>([]);
     const [selectedYear, setSelectedYear] = useState("2024")
+    const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+    const [selectedSessionType, setSelectedSessionType] = useState<string | null>(null)
+    const [pageLoading, setPageLoading] = useState(false)
+    const yearList = [
+        { value: '2023' },
+        { value: '2024' },
+    ]
+    const [countryList, setCountryList] = useState<any[]>([])
+    const [sessionTypeList, setSessionTypeList] = useState<any[]>([])
+
+    const fetchData = async () => {
+        try {
+            setPageLoading(true)
+            const params = {
+                year: selectedYear ? Number(selectedYear) : undefined,
+            }
+            const batchPromises = [
+                fetchSession(params),
+                fetchMeeting(params),
+            ]
+            const [data, meetingData] = await Promise.all(batchPromises)
+
+            const mergedData = data?.map((session: SessionParams) => {
+                const meeting = meetingData.find((m: MeetingParams) => m.meeting_key === session.meeting_key);
+                return {
+                    ...session,
+                    meeting_name: meeting ? meeting.meeting_name : null,
+                }
+            });
+
+            setSessionData(mergedData);
+            setMeetingData(meetingData);
+            const countryNames = data?.map((d: SessionParams) => d.country_name) || [];
+            const uniqueCountryNames = Array.from(new Set(countryNames));
+            const countryList = uniqueCountryNames.map(name => ({ value: name }));
+            setCountryList(countryList)
+
+        } catch (error) {
+            console.error("Error fetching session data:", error);
+        } finally {
+            setPageLoading(false)
+        }
+    }
 
 
     useEffect(() => {
-
-        fetch(`${apiUrl}/sessions?session_name=Race&year=${selectedYear}`)
-            .then(res => res.json())
-            .then(json => setSessionData(json))
-            .catch(err => console.error(err))
-
+        if (selectedYear) {
+            fetchData()
+        }
     }, [selectedYear])
 
+    useEffect(() => {
+        if (!selectedYear || !selectedCountry) {
+            setSessionTypeList([])
+            setSelectedSessionType(null)
+        } else {
+            const sessionList = sessionData?.filter((s: SessionParams) => s.country_name === selectedCountry)?.map((d: SessionParams) => d.session_name) || [];
+            const uniqueSessionList = Array.from(new Set(sessionList));
+            const filterSessionList = uniqueSessionList.map(s => ({ value: s }));
+            setSessionTypeList(filterSessionList || [])
+            setSelectedSessionType(null)
+        }
+    }, [selectedYear, selectedCountry])
 
 
-    // const { tableProps } = useTable<SessionParams, HttpError>({
-    //     resource: "sessions?session_name=Race&year=2024",
-    //     hasPagination: false,
-
-    // });
-
-    const handleChange = (value: string) => setSelectedYear(value)
+    const filterData = useMemo(() => {
+        return sessionData?.filter((session: SessionParams | MeetingParams) => {
+            const matchesCountry = !selectedCountry || session.country_name === selectedCountry;
+            const matchesSessionType = !selectedSessionType || session.session_name === selectedSessionType;
+            return matchesCountry && matchesSessionType;
+        }) || [];
+    }, [sessionData, selectedCountry, selectedSessionType]);
 
     return (
         <List>
@@ -57,22 +110,67 @@ export const SessionList = () => {
             Select year :
 
             <Select
-                placeholder="Select year"
+                placeholder="Select Year"
                 defaultValue="2024"
                 style={{ width: 120, margin: 20 }}
-                onChange={handleChange}
-                options={[
+                onChange={(value: string) => {
+                    setSelectedYear(value)
+                    setSelectedCountry(null)
+                    setSelectedSessionType(null)
+                }}
+                options={yearList}
+                allowClear={true}
+                onClear={() => {
+                    setSelectedCountry(null)
+                    setSelectedSessionType(null)
+                }}
+            />
 
-                    { value: '2023' },
-                    { value: '2024' },
-                ]}
+
+            Select country :
+
+            <Select
+                placeholder="Select Country"
+                style={{ width: 200, margin: 20 }}
+                onChange={(value: string) => {
+                    setSelectedCountry(value)
+                    setSelectedSessionType(null)
+                }}
+                options={countryList}
+                allowClear={true}
+                disabled={!selectedYear}
+                onClear={() => {
+                    setSelectedSessionType(null)
+                }}
+            />
+
+            Select Session :
+
+            <Select
+                placeholder="Select Session"
+                style={{ width: 200, margin: 20 }}
+                onChange={(value: string) => setSelectedSessionType(value)}
+                options={sessionTypeList}
+                allowClear={true}
+                disabled={!selectedCountry}
             />
 
             <br />
 
-            <Table dataSource={sessionData} rowKey="session_key">
+
+
+            <Table dataSource={filterData} rowKey="session_key"
+                onRow={(record) => ({
+                    onClick: () => {
+                        // Your logic here
+                        navigate(`/sessions/show/race?session_key=${record.session_key}&meeting_key=${record.meeting_key}`);
+                    },
+                })}
+                loading={pageLoading}
+            >
                 <Table.Column dataIndex="country_name" title="Country" />
-                <Table.Column dataIndex="session_type" title="Session Type" />
+                <Table.Column dataIndex="meeting_name" title="Meeting Name" />
+                <Table.Column dataIndex="session_name" title="Session Name" />
                 {/* <Table.Column dataIndex="session_name" title="Session Name" /> */}
                 <Table.Column
                     dataIndex="date_start"

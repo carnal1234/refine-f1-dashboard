@@ -27,6 +27,7 @@ import routerProvider, {
 } from "@refinedev/react-router-v6";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { App as AntdApp, ConfigProvider, theme } from "antd";
+import GlobalSpinner from "./components/common/GlobalSpinner";
 
 import "@refinedev/antd/dist/reset.css";
 
@@ -173,7 +174,10 @@ const App: React.FC = () => {
           text="Formula 1 Dashboard"
         />
       )}>
-        <Outlet />
+        <div style={{ position: 'relative', height: '100%' }}>
+          <GlobalSpinner />
+          <Outlet />
+        </div>
       </ThemedLayoutV2>
     )
   }
@@ -195,14 +199,14 @@ const App: React.FC = () => {
                   icon: <DashboardOutlined />,
                 },
               },
-              {
-                name: "standing",
-                list: "/standings",
-                meta: {
-                  label: "Standing",
-                  icon: <CrownOutlined />,
-                },
-              },
+              // {
+              //   name: "standing",
+              //   list: "/standings",
+              //   meta: {
+              //     label: "Standing",
+              //     icon: <CrownOutlined />,
+              //   },
+              // },
               {
                 name: "Races",
                 list: "/sessions",

@@ -99,8 +99,8 @@ const SessionContent = () => {
     }, {});
 
     useEffect(() => {
-        const mode = import.meta.env.MODE as string;
-        // const mode = "TEST"
+        // const mode = import.meta.env.MODE as string;
+        const mode = "TEST"
         // Skip fetching if either key is missing
         if (session_key === undefined || meeting_key === undefined) {
             setIsLoading(false);
@@ -310,6 +310,11 @@ const SessionContent = () => {
         return country && sessionType ? `${country} ${sessionType} Data` : null
     }, [sessionData])
 
+    const rainFall = useMemo(() => {
+        const totalRainFall = weatherData?.reduce((total, item) => total + (item.rainfall || 0), 0);
+        return totalRainFall
+    }, [weatherData])
+
     return (
         <>
             <Spin spinning={isLoading} tip={isLoading ? "Refreshing..." : "Loading..."}>
@@ -317,7 +322,7 @@ const SessionContent = () => {
                     trackTemperature={weatherData?.[0]?.track_temperature ?? 0}
                     airTemperature={weatherData?.[0]?.air_temperature ?? 0}
                     humidity={weatherData?.[0]?.humidity ?? 0}
-                    rainfall={weatherData?.[0]?.rainfall ?? 0}
+                    rainfall={rainFall ?? 0}
                     windSpeed={weatherData?.[0]?.wind_speed ?? 0}
                     meeting={meetingData?.[0] ?? null}
                     session={sessionData?.[0] ?? null}
@@ -326,7 +331,21 @@ const SessionContent = () => {
                 {title()}
             </CustomText> */}
                 <div style={{ margin: '1rem', padding: '8px 16px' }}>
-                    <DriverAvatarGroup drivers={driverData} selectedDrivers={selectedDrivers} toggleDriverSelect={toggleDriverSelect} />
+                    <DriverAvatarGroup
+                        drivers={driverData}
+                        selectedDrivers={selectedDrivers}
+                        toggleDriverSelect={toggleDriverSelect}
+                        onToggleAllDrivers={() => {
+                            setSelectedDrivers(prev => {
+                                const newState: Record<string, boolean> = {};
+                                for (const driverId in prev) {
+                                    newState[driverId] = !prev[driverId]; // invert each value
+                                }
+                                return newState;
+                            });
+                        }}
+                        showAllSelected={isShowDriverSelect}
+                    />
                 </div>
 
                 <Tabs>
@@ -402,8 +421,3 @@ export const SessionPage: React.FC = () => {
         </TelemetryProvider>
     );
 };
-
-
-
-
-

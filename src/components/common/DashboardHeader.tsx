@@ -3,6 +3,8 @@ import { MeetingParams, SessionParams, WeatherParams } from '@/interfaces/openf1
 import WeatherBar from './WeatherBar';
 import { useState, useEffect } from 'react';
 import { getCountryCode } from '@/utilities/helper';
+import { useNavigate } from 'react-router-dom';
+import { LeftOutlined } from '@ant-design/icons';
 
 interface DashboardProps {
     trackTemperature: number,
@@ -27,6 +29,8 @@ const DashboardHeader = ({
     session,
 }: DashboardProps) => {
     const [countryCode, setCountryCode] = useState()
+    const navigate = useNavigate();
+
 
     useEffect(() => {
         if (meeting && meeting.country_name) {
@@ -43,7 +47,7 @@ const DashboardHeader = ({
             <Col xs={24} sm={8} style={{ display: 'flex', alignItems: 'center' }}>
                 {countryCode && (<span className={`fi fis fi-${countryCode}`} style={{ width: '64px', height: '32px' }}></span>)}
                 <div style={{ marginLeft: 12 }}>
-                    <h1 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{meeting?.meeting_name}: {session?.session_type}</h1>
+                    <h1 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 'bold', margin: 0 }}>{meeting?.meeting_name}: {session?.session_name}</h1>
                     {/* <p style={{ color: '#9ca3af', fontSize: '0.875rem', margin: 0 }}>01:25:43</p> */}
                 </div>
             </Col>
@@ -59,6 +63,13 @@ const DashboardHeader = ({
                     windSpeed={windSpeed}
                 />
             </Col>
+            <Col xs={24} sm={4} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
+                <Button onClick={() => navigate(-1)} style={{ marginBottom: '16px' }}>
+                    <LeftOutlined />
+                </Button>
+            </Col>
+
+
         </Row>
     );
 };

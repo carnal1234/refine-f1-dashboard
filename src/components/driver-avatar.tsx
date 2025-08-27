@@ -12,11 +12,6 @@ interface CustomAvatarProps {
 }
 
 const DriverAvatar = (props: { driverData: DriverParams }) => {
-
-
-
-
-
     const StyledAvatar: React.FunctionComponent<AvatarProps & CustomAvatarProps> = styled(Avatar) <{ isselected: string; bordercolor: string, }> `
         width: 100px;
         height: 100px;
@@ -41,8 +36,6 @@ const DriverAvatar = (props: { driverData: DriverParams }) => {
         : "#fff";
 
     const driver = props.driverData
-
-
 
     return (
         <>
