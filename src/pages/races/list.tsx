@@ -20,7 +20,7 @@ import { fetchMeeting, fetchSession } from "@/services/openF1Api";
 
 
 
-
+type dataParams = SessionParams & MeetingParams
 
 export const SessionList = () => {
 
@@ -28,7 +28,7 @@ export const SessionList = () => {
     const go = useGo();
     const navigate = useNavigate();
 
-    const [sessionData, setSessionData] = useState<SessionParams[] | MeetingParams[]>([]);
+    const [sessionData, setSessionData] = useState<dataParams[]>([]);
     const [meetingData, setMeetingData] = useState<MeetingParams[]>([]);
     const [selectedYear, setSelectedYear] = useState("2024")
     const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
@@ -97,7 +97,7 @@ export const SessionList = () => {
 
 
     const filterData = useMemo(() => {
-        return sessionData?.filter((session: SessionParams | MeetingParams) => {
+        return sessionData?.filter((session: dataParams) => {
             const matchesCountry = !selectedCountry || session.country_name === selectedCountry;
             const matchesSessionType = !selectedSessionType || session.session_name === selectedSessionType;
             return matchesCountry && matchesSessionType;

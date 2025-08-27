@@ -29,3 +29,8 @@ cursor/*
 #Data
 /src/data/*
 
+#Env
+.env
+.env.*
+.env.*
+
