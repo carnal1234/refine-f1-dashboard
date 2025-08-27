@@ -27,4 +27,5 @@ yarn-error.log*
 .vscode/*
 cursor/*
 #Data
+/src/data/*
 

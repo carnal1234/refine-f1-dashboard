@@ -1,17 +1,17 @@
 [
-    {
-      "meeting_key": 1229,
-      "circuit_key": 63,
-      "circuit_short_name": "Sakhir",
-      "meeting_code": "BRN",
-      "location": "Sakhir",
-      "country_key": 36,
-      "country_code": "BRN",
-      "country_name": "Bahrain",
-      "meeting_name": "Bahrain Grand Prix",
-      "meeting_official_name": "FORMULA 1 GULF AIR BAHRAIN GRAND PRIX 2024",
-      "gmt_offset": "03:00:00",
-      "date_start": "2024-02-29T11:30:00+00:00",
-      "year": 2024
-    }
-  ]
+  {
+    "meeting_key": 1233,
+    "circuit_key": 49,
+    "circuit_short_name": "Shanghai",
+    "meeting_code": "CHN",
+    "location": "Shanghai",
+    "country_key": 53,
+    "country_code": "CHN",
+    "country_name": "China",
+    "meeting_name": "Chinese Grand Prix",
+    "meeting_official_name": "FORMULA 1 LENOVO CHINESE GRAND PRIX 2024",
+    "gmt_offset": "08:00:00",
+    "date_start": "2024-04-19T03:30:00+00:00",
+    "year": 2024
+  }
+]

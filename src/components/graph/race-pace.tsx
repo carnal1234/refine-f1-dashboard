@@ -1,4 +1,4 @@
-import { useRef, useState, SetStateAction, useCallback } from 'react'
+import { useRef, useState, SetStateAction, useCallback, useEffect } from 'react'
 import { Line, LineConfig } from '@ant-design/plots'
 
 import { Button, Card, Slider } from "antd";
@@ -100,11 +100,14 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
         return { minValue: minValue, maxValue: maxValue }
     }
+    // Calculate min/max only from valid lap durations
+    const validLapDurations = lapData
+        .map(x => x.lap_duration)
+        .filter((duration): duration is number => duration !== null && duration !== undefined && duration > 0);
 
-    //const fastest_lap = lapData.map(x => )
-
-
-    const minMax = CalcMinMax(lapData.map(x => x.lap_duration))
+    const minMax = CalcMinMax(validLapDurations);
+    console.log('Valid lap durations count:', validLapDurations.length);
+    console.log('Min/Max:', minMax);
 
 
     const lapDataWithStint: any = lapData.map(data => {
@@ -116,7 +119,36 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
     })
 
-    const data = state.showOutlier ? lapDataWithStint : lapDataWithStint.filter((x: { lap_duration: number; }) => x.lap_duration >= minMax.minValue && x.lap_duration <= minMax.minValue * state.outlierThreshold / 100)
+    // Filter out null lap_duration values first
+    const validLapData = lapDataWithStint.filter((x: { lap_duration: number | null }) => x.lap_duration !== null && x.lap_duration > 0);
+
+    const data = state.showOutlier ? validLapData : validLapData.filter((x: { lap_duration: number }) => {
+        const threshold = minMax.minValue * (state.outlierThreshold / 100);
+        return x.lap_duration >= minMax.minValue && x.lap_duration <= threshold;
+    });
+
+    useEffect(() => {
+        console.log('Filtered data count:', data.length);
+        console.log('Min/Max values:', minMax);
+        console.log('Outlier threshold:', state.outlierThreshold);
+        console.log('Threshold calculation:', minMax.minValue * (state.outlierThreshold / 100));
+
+        // Debug lap number mapping
+        const lapNumbers = data.map((d: any) => d.lap_number).sort((a: number, b: number) => a - b);
+        console.log('Lap numbers in data:', lapNumbers);
+        console.log('Unique lap numbers:', [...new Set(lapNumbers)]);
+
+        // Check for gaps in lap numbers
+        const gaps = [];
+        for (let i = 0; i < lapNumbers.length - 1; i++) {
+            if (lapNumbers[i + 1] - lapNumbers[i] > 1) {
+                gaps.push(`Gap between ${lapNumbers[i]} and ${lapNumbers[i + 1]}`);
+            }
+        }
+        console.log('Gaps in lap numbers:', gaps);
+
+        console.log('Sample data:', data.slice(0, 5));
+    }, [data, minMax, state.outlierThreshold])
 
 
 
@@ -141,9 +173,10 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                             type: "dataMarker",
                             position: [safetyCarOutLap, 'max'],
                             text: {
-                                content: `${d.message} AT LAP ${safetyCarOutLap}`,
+                                content: `SC`,
                                 style: {
-                                    fill: 'black'
+                                    fill: 'yellow',
+                                    stroke: 'black'
                                 }
                             },
 
@@ -162,6 +195,24 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                             type: "region",
                             start: [safetyCarOutLap, 'min'],
                             end: [safetyCarInLap, 'max'],
+                            style: {
+                                fill: 'rgba(255, 255, 0, 0.2)', // Slight yellow transparent background
+                                stroke: 'rgba(255, 255, 0, 0.5)', // Yellow border
+                                lineWidth: 1
+                            }
+                        },
+                        {
+                            id: `safetyCarText[${safetyCarOutLap} - ${safetyCarInLap}]`,
+                            type: "text",
+                            position: [(safetyCarOutLap + safetyCarInLap) / 2, 'middle'],
+                            content: 'SC',
+                            style: {
+                                fill: '#FFD700', // Golden yellow text
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                textBaseline: 'middle'
+                            }
                         }
                     )
                 }
@@ -187,13 +238,12 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         isStack: false,
         seriesField: 'driver_number',
         xAxis: {
+            type: 'linear',
             label: { formatter: (v) => v },
-
             title: {
                 text: "圈",
                 description: "Lap",
                 position: "center",
-
             },
         },
         yAxis: {
@@ -217,6 +267,8 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         smooth: true,
         legend: {
             position: 'right-top',
+            offsetX: 30,
+            offsetY: 0,
             itemName: {
                 formatter: function (text: string) {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
