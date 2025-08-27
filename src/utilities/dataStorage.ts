@@ -85,7 +85,10 @@ class DataStorage {
         if (stored) {
           cacheItem = JSON.parse(stored);
           // Restore to memory cache
-          this.cache.set(key, cacheItem);
+          if (cacheItem) {
+            // Restore to memory cache
+            this.cache.set(key, cacheItem);
+          }
         }
       } catch (error) {
         console.warn(`Failed to retrieve ${dataType} from sessionStorage:`, error);
