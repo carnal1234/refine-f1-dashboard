@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Row, Col, Typography, Card, Statistic, Space } from 'antd';
+import { Alert, Row, Col, Typography, Card, Statistic, Space, Spin } from 'antd';
 import { ClockCircleOutlined, CalendarOutlined, TrophyOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { fetchCurrentSeason } from '@/services/ergastApi';
@@ -148,6 +148,7 @@ export const HomePage = () => {
     const [data, setData] = useState<any>();
     const [raceIndex, setNextRaceIndex] = useState(0);
     const [currentRace, setCurrentRace] = useState<any>({});
+    const [isLoading, setIsLoading] = useState(false);
 
     const calculateTimeLeft = () => {
         let race = data?.MRData?.RaceTable?.Races ? data.MRData.RaceTable.Races[raceIndex] : undefined;
@@ -193,13 +194,17 @@ export const HomePage = () => {
 
         async function fetchData() {
             try {
+                setIsLoading(true)
                 const apiData = mode === "development" ? await import('@/data/current.json') : await fetchCurrentSeason();
                 setData(apiData);
                 const raceIndex = findNextRace(apiData.MRData.RaceTable.Races);
                 setNextRaceIndex(raceIndex);
                 setCurrentRace(apiData.MRData.RaceTable.Races[raceIndex]);
+
             } catch (err) {
                 console.error("Error fetching data", err);
+            } finally {
+                setIsLoading(false);
             }
         }
         fetchData();
@@ -214,29 +219,32 @@ export const HomePage = () => {
         if (!currentRace) return null;
 
         return (
-            <Card
-                style={{
-                    marginBottom: 24,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white'
-                }}
-            >
-                <Row align="middle" justify="space-between">
-                    <Col>
-                        <Space direction="vertical" size="small">
-                            <Title level={2} style={{ color: 'white', margin: 0 }}>
-                                {currentRace.raceName}
-                            </Title>
-                            <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
-                                {currentRace.circuitName} • {dayjs(currentRace.date).format('MMMM D, YYYY')}
-                            </Text>
-                        </Space>
-                    </Col>
-                    <Col>
-                        <TrophyOutlined style={{ fontSize: '48px', color: 'rgba(255,255,255,0.8)' }} />
-                    </Col>
-                </Row>
-            </Card>
+            <>
+                <Spin spinning={isLoading} tip={isLoading ? "Refreshing..." : "Loading..."}></Spin>
+                <Card
+                    style={{
+                        marginBottom: 24,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white'
+                    }}
+                >
+                    <Row align="middle" justify="space-between">
+                        <Col>
+                            <Space direction="vertical" size="small">
+                                <Title level={2} style={{ color: 'white', margin: 0 }}>
+                                    {currentRace.raceName}
+                                </Title>
+                                <Text style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                    {currentRace.circuitName} • {dayjs(currentRace.date).format('MMMM D, YYYY')}
+                                </Text>
+                            </Space>
+                        </Col>
+                        <Col>
+                            <TrophyOutlined style={{ fontSize: '48px', color: 'rgba(255,255,255,0.8)' }} />
+                        </Col>
+                    </Row>
+                </Card>
+            </>
         );
     };
 

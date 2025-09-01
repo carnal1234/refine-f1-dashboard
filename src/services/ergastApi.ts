@@ -2,7 +2,7 @@
 
 const fetchApiData = async (endpoint: string) => {
     try {
-        const url = `https://ergast.com/api/f1${endpoint}`;
+        const url = `https://api.jolpi.ca/ergast/f1${endpoint}`;
         const response = await fetch(url);
         const data = await response.json();
         //console.log(url);
