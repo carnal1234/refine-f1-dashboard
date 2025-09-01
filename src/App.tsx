@@ -78,7 +78,7 @@ const App: React.FC = () => {
         error: {
           message: "Login failed",
           name: "Invalid email or password",
-        },
+        }
       };
     },
     register: async (params) => {

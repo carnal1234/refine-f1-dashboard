@@ -1,6 +1,6 @@
 // intefaces/openF1.ts
 
-export type OpenF1ApiParams = CarDataParams | DateRangeParams | DriverParams | IntervalParams | LapParams | LocationParams | MeetingParams | PitParams | PositionParams | RaceControlParams | SessionParams | StintParams | TeamRadioParams | WeatherParams;
+export type OpenF1ApiParams = CarDataParams | DateRangeParams | DriverParams | IntervalParams | LapParams | LocationParams | MeetingParams | PitParams | PositionParams | RaceControlParams | SessionParams | SessionResultParams | StintParams | TeamRadioParams | WeatherParams;
 
 /**
  * @param date_gt 
@@ -343,4 +343,31 @@ export interface WeatherParams {
     track_temperature?: number;
     wind_direction?: number;
     wind_speed?: number;
+}
+
+/**
+ * @param dnf	Indicates whether the driver Did Not Finish the race. This can be true only for qualifying and race sessions.
+ * @param dns	Indicates whether the driver Did Not Start the race. This can be true only for qualifying and race sessions.
+ * @param dsq	Indicates whether the driver was disqualified.
+ * @param driver_number	The unique number assigned to an F1 driver (cf. Wikipedia).
+ * @param duration	Either the best lap time (for practice or qualifying), or the total race time (for races), in seconds. In qualifying, this is an array of three values for Q1, Q2, and Q3. Can be null for lapped drivers.
+ * @param gap_to_leader	The time gap to the session leader in seconds, or +N LAP(S) if the driver was lapped. In qualifying, this is an array of three values for Q1, Q2, and Q3.
+ * @param number_of_laps	Total number of laps completed during the session.
+ * @param meeting_key	The unique identifier for the meeting. Use latest to identify the latest or current meeting.
+ * @param points	The number of points earned by the driver in this session.
+ * @param position	The driver's final position at the end of the session.
+ * @param session_key	The unique identifier for the session. Use latest to identify the latest or current session.
+ */
+export interface SessionResultParams {
+    dnf?: boolean;
+    dns?: boolean;
+    dsq?: boolean;
+    driver_number?: number;
+    duration?: number | null | number[];
+    gap_to_leader?: number | string | number[];
+    number_of_laps?: number;
+    meeting_key?: number | string;
+    points?: number;
+    position?: number;
+    session_key?: number | string;
 }

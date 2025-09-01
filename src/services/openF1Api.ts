@@ -16,6 +16,7 @@ import {
     StintParams,
     TeamRadioParams,
     WeatherParams,
+    SessionResultParams,
   } from '@/interfaces/openf1'
   
   const fetchApiData = async (
@@ -213,4 +214,17 @@ import {
     const data = await fetchApiData(endpoint, params, dateRangeParams);
     return data;
   };
+  /** 
+   * Provides information about the results of a session.
+   * @param params query parameters
+   * @returns data
+  */
+
+  export const fetchSessionResult = async (params: SessionResultParams) => {
+    const endpoint = "/session_result";
+    const data = await fetchApiData(endpoint, params);
+    return data;
+  };
+
+  
   

@@ -6,11 +6,25 @@ import { twMerge } from "tailwind-merge"
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function formatSecondsToTime(seconds: any) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
+    const totalSeconds = Number(seconds);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+    const milliseconds = Math.round((totalSeconds - Math.floor(totalSeconds)) * 1000);
+    
+    // If duration is greater than 1 hour, use HH:MM:SS.MS format
+    if (hours > 0) {
+        const mm = String(minutes).padStart(2, '0');
+        const ss = remainingSeconds.toFixed(0).padStart(2, '0');
+        const ms = String(milliseconds).padStart(3, '0');
+        return `${hours}:${mm}:${ss}.${ms}`;
+    }
+    
+    // Otherwise, use original MM:SS.MMM format
     const formattedSeconds = remainingSeconds.toFixed(3).padStart(6, '0');
     return `${minutes}:${formattedSeconds}`;
 };
+
 
 export function parseISOTime(time: string) {
     return parseInt(time.split("T")[1]).toFixed(2);

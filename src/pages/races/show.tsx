@@ -5,7 +5,7 @@ import { Flex, Row, Col, Spin, TabsProps, Tabs } from "antd";
 import { ListItemProps } from "antd/lib/list";
 import { Show, MarkdownField } from "@refinedev/antd";
 import { Card, Typography } from "antd";
-import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams, WeatherParams, MeetingParams } from "../../interfaces/openf1";
+import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams, WeatherParams, MeetingParams, SessionResultParams } from "../../interfaces/openf1";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
 import { Text as CustomText } from "../../components/common";
@@ -20,10 +20,13 @@ import DriverAvatarGroup from "@/components/driver-avatar-group";
 import { TelemetryProvider, useTelemetry } from "@/context/TelemetryContext";
 import EventCard, { EventCardRef } from "@/components/event-card";
 import { PositionGraph } from "@/components/graph/position";
-import { fetchDrivers, fetchSession, fetchLaps, fetchStint, fetchPosition, fetchRaceControl, fetchPit, fetchWeather, fetchMeeting } from "@/services/openF1Api";
+import { fetchDrivers, fetchSession, fetchLaps, fetchStint, fetchPosition, fetchRaceControl, fetchPit, fetchWeather, fetchMeeting, fetchSessionResult } from "@/services/openF1Api";
+import { formatSecondsToTime } from "@/utilities/helper";
 import TabPane from "antd/es/tabs/TabPane";
 import DashboardHeader from "@/components/common/DashboardHeader";
 import { storageHelpers } from "@/utilities/dataStorage";
+import Leaderboard from "@/components/Leaderboard";
+import { ColumnsType } from "antd/es/table";
 
 
 const { Title, Text } = Typography;
@@ -61,6 +64,7 @@ const SessionContent = () => {
     const [weatherData, setWeatherData] = useState<Array<WeatherParams>>([])
     const [pitData, setPitData] = useState<Array<PitParams>>([]);
     const [meetingData, setMeetingData] = useState<Array<MeetingParams>>([])
+    const [sessionResultData, setSessionResultData] = useState<Array<SessionResultParams>>([])
     const [isLoading, setIsLoading] = useState(true);
 
     const {
@@ -98,6 +102,13 @@ const SessionContent = () => {
         return driversSoFar;
     }, {});
 
+
+    const isRace = sessionData[0]?.session_type === 'Race'
+    const isQualifying = sessionData[0]?.session_type === 'Qualifying'
+    const isPractice = sessionData[0]?.session_type === 'Practice'
+
+
+
     useEffect(() => {
         // const mode = import.meta.env.MODE as string;
         const mode = "TEST"
@@ -120,7 +131,7 @@ const SessionContent = () => {
             let pitData = needsFetch.pit ? null : storageHelpers.getSessionData('pit', session_key!);
             let weatherData = needsFetch.weather ? null : storageHelpers.getSessionData('weather', session_key!);
             let meetingData = needsFetch.meeting ? null : storageHelpers.getMeetingData(meeting_key!);
-
+            let sessionResultData = needsFetch.sessionResult ? null : storageHelpers.getSessionData('sessionResult', session_key!);
             // Batch 1 (up to 3 requests)
             const batch1Promises = [];
             if (needsFetch.drivers) batch1Promises.push(fetchDrivers({ session_key }));
@@ -160,6 +171,7 @@ const SessionContent = () => {
             if (needsFetch.pit) batch3Promises.push(fetchPit({ session_key }));
             if (needsFetch.weather) batch3Promises.push(fetchWeather({ session_key }));
             if (needsFetch.meeting) batch3Promises.push(fetchMeeting({ meeting_key }));
+            if (needsFetch.sessionResult) batch3Promises.push(fetchSessionResult({ session_key }));
 
             if (batch3Promises.length > 0) {
                 const batch3Results = await Promise.all(batch3Promises);
@@ -167,13 +179,14 @@ const SessionContent = () => {
                 if (needsFetch.pit) { pitData = batch3Results[resultIndex++]; }
                 if (needsFetch.weather) { weatherData = batch3Results[resultIndex++]; }
                 if (needsFetch.meeting) { meetingData = batch3Results[resultIndex++]; }
+                if (needsFetch.sessionResult) { sessionResultData = batch3Results[resultIndex++]; }
             }
 
-            return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData];
+            return [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData];
         }
         //Use For Development
         async function fetchMockData() {
-            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData] = await Promise.all([
+            const [driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData] = await Promise.all([
                 await import('@/data/driver.json'),
                 await import('@/data/sessions.json'),
                 await import('@/data/lap.json'),
@@ -182,13 +195,14 @@ const SessionContent = () => {
                 await import('@/data/race-control.json'),
                 await import('@/data/pit.json'),
                 await import('@/data/weather.json'),
-                await import('@/data/meeting.json')
+                await import('@/data/meeting.json'),
+                await import('@/data/sessionResult.json')
             ]);
             return [driverData?.default, sessionData?.default, lapData?.default,
-            stintData?.default, positionData?.default, raceControlData?.default, pitData?.default, weatherData?.default, meetingData?.default];
+            stintData?.default, positionData?.default, raceControlData?.default, pitData?.default, weatherData?.default, meetingData?.default, sessionResultData?.default];
         }
 
-        const setAllData = ([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]: any) => {
+        const setAllData = ([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData]: any) => {
             for (let item of driverData) {
                 item['driver_number'] = item['driver_number']?.toString()
             }
@@ -211,6 +225,9 @@ const SessionContent = () => {
             for (let item of pitData) {
                 item['driver_number'] = item['driver_number']?.toString()
             }
+            for (let item of sessionResultData) {
+                item['driver_number'] = item['driver_number']?.toString()
+            }
 
             setDriverData(driverData);
             setSessionData(sessionData);
@@ -221,6 +238,7 @@ const SessionContent = () => {
             setPitData(pitData)
             setWeatherData(weatherData)
             setMeetingData(meetingData)
+            setSessionResultData(sessionResultData)
 
             // Store data using improved storage system
             storageHelpers.storeSessionData('drivers', driverData, session_key!);
@@ -232,6 +250,7 @@ const SessionContent = () => {
             storageHelpers.storeSessionData('pit', pitData, session_key!);
             storageHelpers.storeSessionData('weather', weatherData, session_key!);
             storageHelpers.storeMeetingData(meetingData, meeting_key!);
+            storageHelpers.storeSessionData('sessionResult', sessionResultData, session_key!);
 
             setIsLoading(false)
 
@@ -256,7 +275,7 @@ const SessionContent = () => {
         const cachedPit = storageHelpers.getSessionData('pit', session_key!);
         const cachedWeather = storageHelpers.getSessionData('weather', session_key!);
         const cachedMeeting = storageHelpers.getMeetingData(meeting_key!);
-
+        const cachedSessionResult = storageHelpers.getSessionData('sessionResult', session_key!);
         // Set cached data if available
         if (cachedDrivers) setDriverData(cachedDrivers as DriverParams[]);
         if (cachedSession) setSessionData(cachedSession as SessionParams[]);
@@ -267,6 +286,7 @@ const SessionContent = () => {
         if (cachedPit) setPitData(cachedPit as PitParams[]);
         if (cachedWeather) setWeatherData(cachedWeather as WeatherParams[]);
         if (cachedMeeting) setMeetingData(cachedMeeting as MeetingParams[]);
+        if (cachedSessionResult) setSessionResultData(cachedSessionResult as SessionResultParams[]);
 
 
         // Check what data we need to fetch
@@ -279,7 +299,8 @@ const SessionContent = () => {
             raceControl: !storageHelpers.hasSessionData('raceControl', session_key!),
             pit: !storageHelpers.hasSessionData('pit', session_key!),
             weather: !storageHelpers.hasSessionData('weather', session_key!),
-            meeting: !storageHelpers.hasMeetingData(meeting_key!)
+            meeting: !storageHelpers.hasMeetingData(meeting_key!),
+            sessionResult: !storageHelpers.hasSessionData('sessionResult', session_key!)
         };
 
         // If we have all data cached, just set loading to false
@@ -289,14 +310,14 @@ const SessionContent = () => {
         }
 
         if (mode && mode.toLowerCase() === "development") {
-            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]) => {
-                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData])
+            fetchMockData().then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData])
             }).catch(error => {
                 console.error(error)
             })
         } else {
-            fetchAllData(needsFetch).then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData]) => {
-                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData])
+            fetchAllData(needsFetch).then(([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData]) => {
+                setAllData([driverData, sessionData, lapData, stintData, positionData, raceControlData, pitData, weatherData, meetingData, sessionResultData])
             }).catch(error => {
                 console.error(error)
             })
@@ -314,6 +335,170 @@ const SessionContent = () => {
         const totalRainFall = weatherData?.reduce((total, item) => total + (item.rainfall || 0), 0);
         return totalRainFall
     }, [weatherData])
+
+    // Create leaderboard columns for the generalized component
+    const getLeaderboardColumns = (): ColumnsType<any> => {
+        const generalColumn = [{
+            title: 'POS',
+            dataIndex: 'position',
+            key: 'position',
+            width: 80,
+            align: 'center' as const,
+            render: (pos: number) => (
+                <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{pos && pos > 0 ? pos : "NC"}</span>
+            ),
+        },
+        {
+            title: 'NO',
+            dataIndex: 'driver_number',
+            key: 'num',
+            width: 70,
+            align: 'center' as const,
+            render: (num: number) => (
+                <span style={{ color: '#8c8c8c', fontWeight: 'bold', fontSize: '16px' }}>{num}</span>
+            ),
+        },
+        {
+            title: 'DRIVER',
+            dataIndex: 'driver_name',
+            key: 'name',
+            width: 300,
+            render: (name: string, record: SessionResultParams) => {
+                const driver = driverData.find(d => d.driver_number === record.driver_number);
+                const teamColor = driverTeamColorMap[record.driver_number!];
+                if (!driver) return <span>Driver not found</span>;
+
+                return (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                        <DriverAvatar driverData={driver} size={32} />
+                        <div
+                            style={{
+                                width: 4,
+                                height: 24,
+                                backgroundColor: teamColor,
+                                marginRight: 12,
+                                borderRadius: 2
+                            }}
+                        />
+                        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{driver.full_name}</span>
+                    </div>
+                )
+            },
+        },
+
+        ]
+
+        const qualifyingColumn = [
+            {
+                title: 'Q1',
+                dataIndex: 'q1',
+                key: 'q1',
+                width: 80,
+                align: 'center' as const,
+                render: (q1: number, record: SessionResultParams) => {
+                    const duration = typeof record.duration === 'number' ? formatSecondsToTime(record.duration) : record.duration?.[0] ? formatSecondsToTime(record.duration?.[0]) : null
+                    return (
+                        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{duration}</span>
+                    )
+                },
+            },
+            {
+                title: 'Q2',
+                dataIndex: 'q2',
+                key: 'q2',
+                width: 80,
+                align: 'center' as const,
+                render: (q2: number, record: SessionResultParams) => (
+                    <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{typeof record.duration === 'number' ? formatSecondsToTime(record.duration) : formatSecondsToTime(record.duration?.[1])}</span>
+                ),
+            },
+            {
+                title: 'Q3',
+                dataIndex: 'q3',
+                key: 'q3',
+                width: 80,
+                align: 'center' as const,
+                render: (q3: number, record: SessionResultParams) => (
+                    <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{typeof record.duration === 'number' ? formatSecondsToTime(record.duration) : formatSecondsToTime(record.duration?.[2])}</span>
+                ),
+            },
+            {
+                title: 'LAPS',
+                dataIndex: 'number_of_laps',
+                key: 'laps',
+                width: 100,
+                align: 'left' as const,
+                render: (laps: string) => (
+                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{laps}</span>
+                )
+            },
+        ]
+
+        const raceColumn = [
+            {
+                title: 'TIME / RETIRED',
+                dataIndex: 'duration',
+                key: 'lastLap',
+                width: 150,
+                align: 'left' as const,
+                render: (duration: string, record: SessionResultParams) => {
+                    if (record.position === 1) {
+                        return <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{formatSecondsToTime(duration)}</span>
+                    }
+                    const isRetired = record.dsq ? "DSQ" : record.dnf ? "DNF" : record.dns ? "DNS" : null
+                    const result = isRetired ? isRetired : typeof record.gap_to_leader === "string" ? record.gap_to_leader :
+                        `+${record.gap_to_leader}s`
+                    return (
+                        <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{result}</span>
+                    )
+                },
+            },
+            {
+                title: 'PTS.',
+                dataIndex: 'points',
+                key: 'gap',
+                width: 80,
+                align: 'left' as const,
+                render: (points: string) => (
+                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{points}</span>
+                ),
+            },
+        ]
+
+        const practiceColumn = [
+            {
+                title: 'TIME / GAP',
+                dataIndex: 'duration',
+                key: 'lastLap',
+                width: 150,
+                align: 'left' as const,
+                render: (duration: string, record: SessionResultParams) => {
+                    return <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{formatSecondsToTime(duration)}</span>
+                },
+            },
+            {
+                title: 'LAPS',
+                dataIndex: 'number_of_laps',
+                key: 'laps',
+                width: 100,
+                align: 'left' as const,
+                render: (laps: string) => (
+                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px' }}>{laps}</span>
+                ),
+
+            },
+        ]
+
+        if (isRace) {
+            return [...generalColumn, ...raceColumn]
+        } else if (isQualifying) {
+            return [...generalColumn, ...qualifyingColumn]
+        } else if (isPractice) {
+            return [...generalColumn, ...practiceColumn]
+        } else {
+            return []
+        }
+    };
 
     return (
         <>
@@ -349,7 +534,29 @@ const SessionContent = () => {
                 </div>
 
                 <Tabs>
-                    <TabPane tab="Race Pace" key="1">
+                    <TabPane tab="Leaderboard" key="1">
+                        <Row
+                            gutter={[32, 32]}
+                            style={{
+                                marginTop: '32px',
+                                width: '100%'
+                            }}>
+                            <Col span={24}>
+                                <Leaderboard
+                                    data={sessionResultData}
+                                    columns={getLeaderboardColumns()}
+                                    title="Race Results"
+                                    loading={isLoading}
+                                    pagination={false}
+                                    size="middle"
+                                    scroll={{ x: 800, y: 600 }}
+                                    showCard={true}
+                                    stripedRows={true}
+                                />
+                            </Col>
+                        </Row>
+                    </TabPane>
+                    <TabPane tab="Race Pace" key="2">
                         <Row
                             gutter={[32, 32]}
                             style={{
@@ -376,7 +583,7 @@ const SessionContent = () => {
                             </Col>
                         </Row>
                     </TabPane>
-                    <TabPane tab="Stint" key="2">
+                    <TabPane tab="Stint" key="3">
                         <Row
                             gutter={[32, 32]}
                             style={{
@@ -390,7 +597,7 @@ const SessionContent = () => {
                             </Col>
                         </Row>
                     </TabPane>
-                    <TabPane tab="Position" key="3">
+                    {isRace && (<TabPane tab="Position" key="4">
                         <Row
                             gutter={[32, 32]}
                             style={{
@@ -408,6 +615,8 @@ const SessionContent = () => {
                             </Col>
                         </Row>
                     </TabPane>
+                    )}
+
                 </Tabs>
             </Spin>
         </>

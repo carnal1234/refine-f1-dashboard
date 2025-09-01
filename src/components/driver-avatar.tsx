@@ -4,19 +4,17 @@ import { motion } from 'framer-motion'
 import { driverImage, isValidColor } from '@/utilities/helper'
 import { DriverParams } from '@/interfaces/openf1'
 
-
-
 interface CustomAvatarProps {
     isselected: string,
-    bordercolor: string
+    bordercolor: string,
+    size?: number
 }
 
-const DriverAvatar = (props: { driverData: DriverParams }) => {
-    const StyledAvatar: React.FunctionComponent<AvatarProps & CustomAvatarProps> = styled(Avatar) <{ isselected: string; bordercolor: string, }> `
-        width: 100px;
-        height: 100px;
+const DriverAvatar = (props: { driverData: DriverParams; size?: number }) => {
+    const StyledAvatar: React.FunctionComponent<AvatarProps & CustomAvatarProps> = styled(Avatar) <{ isselected: string; bordercolor: string; size?: number }> `
+        width: ${(props) => props.size || 100}px;
+        height: ${(props) => props.size || 100}px;
         border-radius: 50%;
-        margin-bottom: 10px;
         border: 2px solid ${(props) => props.bordercolor};
         ${(props) => props.isselected == "false" && `filter: brightness(50%);`}
         ${(props) => props.isselected == "true" && `background-image: linear-gradient(to top, var(--tw-gradient-stops));`}
@@ -40,18 +38,14 @@ const DriverAvatar = (props: { driverData: DriverParams }) => {
     return (
         <>
             <StyledAvatar
-                size={64}
+                size={props.size || 64}
                 src={driverImage(driver?.first_name!, driver?.last_name!)}
                 alt={`${driver.first_name} ${driver.last_name}`}
                 bordercolor={borderColor}
                 isselected='true'
-
-
             >
             </StyledAvatar>
         </>
-
-
     )
 }
 
