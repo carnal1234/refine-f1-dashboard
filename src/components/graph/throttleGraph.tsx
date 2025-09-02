@@ -33,7 +33,7 @@ const ThrottleGraph: React.FC<ThrottleGraph> = ({
     const lineConfig: LineConfig = {
         data: processedData,
         theme: 'dark',
-        xField: "timestamp",
+        xField: "distance",
         yField: "throttle",
         seriesField: 'driver_code',
         isStack: false,

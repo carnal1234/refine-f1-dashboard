@@ -33,7 +33,7 @@ const RPMGraph: React.FC<RPMGraphProps> = ({
     const lineConfig: LineConfig = {
         data: processedData,
         theme: 'dark',
-        xField: "timestamp",
+        xField: "distance",
         yField: "rpm",
         seriesField: 'driver_code',
         isStack: false,

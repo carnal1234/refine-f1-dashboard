@@ -33,7 +33,7 @@ const SpeedGraph: React.FC<SpeedGraphProps> = ({
     const lineConfig: LineConfig = {
         data: processedData,
         theme: 'dark',
-        xField: "timestamp",
+        xField: "distance",
         yField: "speed",
         seriesField: 'driver_code',
         isStack: false,
@@ -47,19 +47,6 @@ const SpeedGraph: React.FC<SpeedGraphProps> = ({
             return driverColor ? `#${driverColor}` : (defaultColor || '#666');
         },
         xAxis: false,
-        // xAxis: {
-        //     title: {
-        //         text: "Distance (m)",
-        //         style: {
-        //             fontSize: 12,
-        //             textAlign: 'center',
-        //             fill: '#999',
-        //         }
-        //     },
-        //     label: {
-        //         formatter: (v: any) => `${Math.round(Number(v))}m`
-        //     }
-        // },
         yAxis: {
             label: { formatter: (v: any) => `${v} km/h` },
             title: {
