@@ -34,7 +34,7 @@ const DRSGraph: React.FC<DRSGraphProps> = ({
     const lineConfig: LineConfig = {
         data: processedData,
         theme: 'dark',
-        xField: "timestamp",
+        xField: "distance",
         yField: "drs",
         seriesField: 'driver_code',
         isStack: false,

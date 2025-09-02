@@ -106,10 +106,11 @@ const Telemetry: React.FC<TelemetryProps> = ({
                 } else {
                     console.log(`Fetching fresh data for ${driverCode} lap ${lap_number}`);
                     let mode = import.meta.env.MODE as string;
+                    mode = "production"
                     const response = mode === "development" ? await import('@/data/test.json') : await fetchTelemetry(year, grand_prix, session_type, driverCode, lap_number);
 
                     if (mode === 'development') {
-                        allTelemetryData.push(...response.default);
+                        allTelemetryData.push(...response.default.telemetry.data_points);
                     } else if (response?.success && response?.telemetry?.data_points) {
                         const telemetryPoints = response.telemetry.data_points;
                         // Cache the fetched data

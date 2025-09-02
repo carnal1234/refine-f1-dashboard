@@ -2,10 +2,12 @@
 
 const fetchApiData = async (endpoint: string) => {
     try {
-        const url = `http://localhost:5000/api/${endpoint}`;
+        const mode = import.meta.env.MODE;
+        const baseUrl = mode === "development" ? 'http://localhost:5000/api' : import.meta.env.VITE_APP_API_URL
+        const url = `${baseUrl}/${endpoint}`;
         const response = await fetch(url);
         const data = await response.json();
-        //console.log(url);
+        console.log(url);
         return data;
     } catch (error) {
         console.error('Error fetching data:', error);

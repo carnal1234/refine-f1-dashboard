@@ -89,7 +89,7 @@ def get_driver_telemetry(session, driver_code, lap_number: int = None) -> Dict[s
             "rpm": float(point['RPM']) if pd.notna(point['RPM']) else None,
             "gear": int(point['nGear']) if pd.notna(point['nGear']) else None,
             "drs": int(point['DRS']) if pd.notna(point['DRS']) else None,
-            "timestamp": str(point.name) if point.name else None,
+            "timestamp": int(point.name) if point.name else None,
             "driver_code": driver_code
         })
     
@@ -207,7 +207,11 @@ def get_driver_telemetry_api(year, grand_prix, session_type, driver_code):
         # Get lap parameter from query string
         lap_number = request.args.get('lap', type=int)
         # setup_fastf1()
-        session = get_session_data(year, grand_prix, session_type)
+        
+        # Use selective loading - only load data for the specific driver
+        session = fastf1.get_session(year, grand_prix, session_type)
+        session.load(telemetry=True, laps=True, weather=False)
+        
         telemetry = get_driver_telemetry(session, driver_code.upper(), lap_number)
         
         # Check if there was an error

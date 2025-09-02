@@ -33,7 +33,7 @@ const GearGraph: React.FC<GearGraphProps> = ({
     const lineConfig: LineConfig = {
         data: processedData,
         theme: 'dark',
-        xField: "timestamp",
+        xField: "distance",
         yField: "gear",
         seriesField: 'driver_code',
         isStack: false,
