@@ -25,6 +25,7 @@ import TabPane from "antd/es/tabs/TabPane";
 import DashboardHeader from "@/components/common/DashboardHeader";
 import Leaderboard from "@/components/Leaderboard";
 import { ColumnsType } from "antd/es/table";
+import Telemetry from "../telemetry";
 
 
 const { Title, Text } = Typography;
@@ -412,6 +413,27 @@ const SessionContent = () => {
                     </Row>
                 </TabPane>
                 )}
+                <TabPane tab="Telemetry" key="5">
+                    <Row
+                        gutter={[32, 32]}
+                        style={{
+                            marginTop: '32px',
+                            width: '100%'
+                        }}>
+                        <Col span={24}>
+                            <Telemetry
+                                meetingData={meetingData}
+                                sessionData={sessionData}
+                                lapData={lapData}
+                                driverData={driverData}
+                                selectedDrivers={selectedDrivers}
+                                driverAcronym={driverAcronym}
+                                driverTeamColorMap={driverTeamColorMap}
+                            />
+                        </Col>
+                    </Row>
+                </TabPane>
+
 
             </Tabs>
         </>

@@ -34,3 +34,6 @@ cursor/*
 .env.*
 .env.*
 
+
+#Pythno
+__pycache__/

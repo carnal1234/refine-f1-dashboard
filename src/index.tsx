@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
+import "./style/global.scss";
 import App from "./App";
 import { LoadingProvider } from "./context/LoadingContext";
 import { Analytics } from '@vercel/analytics/react';
