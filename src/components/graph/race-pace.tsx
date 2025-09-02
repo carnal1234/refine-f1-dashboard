@@ -312,17 +312,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
 
         },
-        // color: (datum: Datum, defaultColor?: string) => {
-
-        //     let driver_no = datum.driver_number
-
-        //     if (driverDataGroupById[driver_no] && driverDataGroupById[driver_no][0].team_colour) {
-        //         return '#' + driverDataGroupById[driver_no][0].team_colour
-        //     }
-
-        //     return defaultColor
-        // }
-
         annotations: getSafetyCarAnnotation(props.raceControlData),
         onReady(chart) {
             chart.on('tooltip:change', (ev: any) => {

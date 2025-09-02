@@ -177,16 +177,9 @@ export const PositionGraph = (props: {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
                 }  // 格式化文本函数
             },
-
-
             custom: true,
-
             items: customLegendItem,
             selected: props.selectedDrivers,
-
-
-
-
         },
         tooltip: {
             title: (title: string, datum: Datum) => {
