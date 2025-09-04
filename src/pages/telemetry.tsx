@@ -105,8 +105,7 @@ const Telemetry: React.FC<TelemetryProps> = ({
                     setDriverLoadingStatus(prev => ({ ...prev, [driverCode]: false }));
                 } else {
                     console.log(`Fetching fresh data for ${driverCode} lap ${lap_number}`);
-                    let mode = import.meta.env.MODE as string;
-                    mode = "production"
+                    const mode = import.meta.env.MODE as string;
                     const response = mode === "development" ? await import('@/data/test.json') : await fetchTelemetry(year, grand_prix, session_type, driverCode, lap_number);
 
                     if (mode === 'development') {
