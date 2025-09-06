@@ -1,4 +1,4 @@
-import { useRef, useState, SetStateAction, useCallback, useEffect } from 'react'
+import { useRef, useState, SetStateAction, useCallback, useEffect, useMemo } from 'react'
 import { Line, LineConfig } from '@ant-design/plots'
 
 import { Button, Card, Slider } from "antd";
@@ -64,94 +64,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     const toggleOutlier = useCallback(() => {
         setState(prev => ({ ...prev, showOutlier: !prev.showOutlier }));
     }, []);
-
-    const graphHeight = 500
-
-    const driverDataGroupById = props.driverData ? groupBy(props.driverData, i => i.driver_number!) : []
-
-    const stintDataGroupById = props.stintData ? groupBy(props.stintData, i => i.driver_number!) : []
-
-    const pitDataGroupById = props.pitData ? groupBy(props.pitData, i => i.driver_number!) : []
-
-
-    const raceControlDataGroupById: Record<number | "OTHER", any> = groupBy(props.raceControlData, i => i.driver_number! || "OTHER")
-
-    for (const driver_number in raceControlDataGroupById) {
-        raceControlDataGroupById[driver_number] = groupBy(raceControlDataGroupById[driver_number], (i: any) => i.lap_number!)
-    }
-
-
-
-    const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
-
-
-    //Calculate median 
-    function CalcMinMax(someArray: any[]): any {
-
-        if (someArray.length < 4)
-            return someArray;
-
-        let values, maxValue, minValue;
-
-        values = someArray.slice().sort((a, b) => a - b);//copy array fast and sort
-
-        minValue = values[0]
-        maxValue = values[values.length - 1]
-
-        return { minValue: minValue, maxValue: maxValue }
-    }
-    // Calculate min/max only from valid lap durations
-    const validLapDurations = lapData
-        .map(x => x.lap_duration)
-        .filter((duration): duration is number => duration !== null && duration !== undefined && duration > 0);
-
-    const minMax = CalcMinMax(validLapDurations);
-    console.log('Valid lap durations count:', validLapDurations.length);
-    console.log('Min/Max:', minMax);
-
-
-    const lapDataWithStint: any = lapData.map(data => {
-        let lap = data.lap_number!
-        let driver_number = data.driver_number!
-        let stint = stintDataGroupById[driver_number]?.find(i =>
-            i.lap_start && i.lap_end && lap >= i.lap_start && lap <= i.lap_end)
-        return Object.assign(data, { stint: stint });
-
-    })
-
-    // Filter out null lap_duration values first
-    const validLapData = lapDataWithStint.filter((x: { lap_duration: number | null }) => x.lap_duration !== null && x.lap_duration > 0);
-
-    const data = state.showOutlier ? validLapData : validLapData.filter((x: { lap_duration: number }) => {
-        const threshold = minMax.minValue * (state.outlierThreshold / 100);
-        return x.lap_duration >= minMax.minValue && x.lap_duration <= threshold;
-    });
-
-    useEffect(() => {
-        console.log('Filtered data count:', data.length);
-        console.log('Min/Max values:', minMax);
-        console.log('Outlier threshold:', state.outlierThreshold);
-        console.log('Threshold calculation:', minMax.minValue * (state.outlierThreshold / 100));
-
-        // Debug lap number mapping
-        const lapNumbers = data.map((d: any) => d.lap_number).sort((a: number, b: number) => a - b);
-        console.log('Lap numbers in data:', lapNumbers);
-        console.log('Unique lap numbers:', [...new Set(lapNumbers)]);
-
-        // Check for gaps in lap numbers
-        const gaps = [];
-        for (let i = 0; i < lapNumbers.length - 1; i++) {
-            if (lapNumbers[i + 1] - lapNumbers[i] > 1) {
-                gaps.push(`Gap between ${lapNumbers[i]} and ${lapNumbers[i + 1]}`);
-            }
-        }
-        console.log('Gaps in lap numbers:', gaps);
-
-        console.log('Sample data:', data.slice(0, 5));
-    }, [data, minMax, state.outlierThreshold])
-
-
-
 
     const getSafetyCarAnnotation = (data: Array<RaceControlParams>): Annotation[] => {
 
@@ -221,6 +133,114 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         return annotations
     }
 
+    const processedData = useMemo(() => {
+        const driverDataGroupById = props.driverData ? groupBy(props.driverData, i => i.driver_number!) : []
+        const stintDataGroupById = props.stintData ? groupBy(props.stintData, i => i.driver_number!) : []
+        const pitDataGroupById = props.pitData ? groupBy(props.pitData, i => i.driver_number!) : []
+        const raceControlDataGroupById: Record<number | "OTHER", any> = groupBy(props.raceControlData, i => i.driver_number! || "OTHER")
+
+        for (const driver_number in raceControlDataGroupById) {
+            raceControlDataGroupById[driver_number] = groupBy(raceControlDataGroupById[driver_number], (i: any) => i.lap_number!)
+        }
+        const lapData = props.data.filter((i: LapParams) => i.lap_duration !== null)
+
+        const validLapDurations = lapData
+            .map(x => x.lap_duration)
+            .filter((duration): duration is number => duration !== null && duration !== undefined && duration > 0);
+
+        const minMax = CalcMinMax(validLapDurations);
+
+        const lapDataWithStint: any = lapData.map(data => {
+            let lap = data.lap_number!
+            let driver_number = data.driver_number!
+            let stint = stintDataGroupById[driver_number]?.find(i =>
+                i.lap_start && i.lap_end && lap >= i.lap_start && lap <= i.lap_end)
+            return Object.assign(data, { stint: stint });
+        })
+
+        const validLapData = lapDataWithStint.filter((x: { lap_duration: number | null }) => x.lap_duration !== null && x.lap_duration > 0);
+
+        return {
+            validLapData: validLapData,
+            minMax: minMax,
+            pitDataGroupById: pitDataGroupById,
+            driverDataGroupById: driverDataGroupById,
+            stintDataGroupById: stintDataGroupById,
+            raceControlDataGroupById: raceControlDataGroupById
+        }
+    }, [props.data, props.driverData, props.stintData, props.pitData, props.raceControlData])
+
+    const graphHeight = 500
+
+    //Memoize filtered data
+    const filteredData = useMemo(() => {
+        if (state.showOutlier) {
+            return processedData.validLapData;
+        }
+
+        return processedData.validLapData.filter((x: { lap_duration: number }) => {
+            const threshold = processedData.minMax.minValue * (state.outlierThreshold / 100);
+            return x.lap_duration >= processedData.minMax.minValue && x.lap_duration <= threshold;
+        });
+    }, [processedData.validLapData, processedData.minMax, state.showOutlier, state.outlierThreshold]);
+
+    // Memoize safety car annotations - only recalculate when race control data changes
+    const safetyCarAnnotations = useMemo(() => {
+        return getSafetyCarAnnotation(props.raceControlData);
+    }, [props.raceControlData]);
+
+
+
+
+
+
+
+
+    //Calculate median 
+    function CalcMinMax(someArray: any[]): any {
+
+        if (someArray.length < 4)
+            return someArray;
+
+        let values, maxValue, minValue;
+
+        values = someArray.slice().sort((a, b) => a - b);//copy array fast and sort
+
+        minValue = values[0]
+        maxValue = values[values.length - 1]
+
+        return { minValue: minValue, maxValue: maxValue }
+    }
+
+
+    // useEffect(() => {
+    //     console.log('Filtered data count:', data.length);
+    //     console.log('Min/Max values:', minMax);
+    //     console.log('Outlier threshold:', state.outlierThreshold);
+    //     console.log('Threshold calculation:', minMax.minValue * (state.outlierThreshold / 100));
+
+    //     // Debug lap number mapping
+    //     const lapNumbers = data.map((d: any) => d.lap_number).sort((a: number, b: number) => a - b);
+    //     console.log('Lap numbers in data:', lapNumbers);
+    //     console.log('Unique lap numbers:', [...new Set(lapNumbers)]);
+
+    //     // Check for gaps in lap numbers
+    //     const gaps = [];
+    //     for (let i = 0; i < lapNumbers.length - 1; i++) {
+    //         if (lapNumbers[i + 1] - lapNumbers[i] > 1) {
+    //             gaps.push(`Gap between ${lapNumbers[i]} and ${lapNumbers[i + 1]}`);
+    //         }
+    //     }
+    //     console.log('Gaps in lap numbers:', gaps);
+
+    //     console.log('Sample data:', data.slice(0, 5));
+    // }, [data, minMax, state.outlierThreshold])
+
+
+
+
+
+
     const itemTemplate = `<li class="g2-tooltip-list-item" data-index={index} style="list-style-type: none; padding: 0px; margin: 12px 0px;">
     <span class="g2-tooltip-marker" style="background: {color}; width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
     <span class="g2-tooltip-name">{name}</span>:
@@ -231,7 +251,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     </li>`
 
     const lineConfig: LineConfig = {
-        data: data,
+        data: filteredData,
         theme: 'dark',
         xField: "lap_number",
         yField: "lap_duration",
@@ -294,7 +314,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                 const name = props.driverAcronym[driverNumber] ? (driverNumber + " " + props.driverAcronym[driverNumber]) : driverNumber
                 const compound = datum.stint?.compound
                 const stintCompoundSVG = compound ? renderToString(getCompoundComponent(compound)) : ""
-                const pitData = pitDataGroupById[driverNumber]
+                const pitData = processedData.pitDataGroupById[driverNumber]
                 let isPit = pitData?.some(i => i.lap_number === datum.lap_number) ? "In Pit" : ""
                 isPit = pitData?.some(i => i.lap_number === datum.lap_number - 1) ? "Out Lap" : isPit
                 return {

@@ -79,6 +79,7 @@ const SessionContent = () => {
     }, [session_key, meeting_key, loadSessionData]);
 
     const toggleDriverSelect = async (driver: DriverParams) => {
+        console.log('toggleDriverSelect', driver, selectedDrivers)
         if (!driver) return;
         const driver_no = driver.driver_number?.toString()!
         if (driver_no && selectedDrivers.hasOwnProperty(driver_no)) {
@@ -112,7 +113,9 @@ const SessionContent = () => {
     }, [weatherData])
 
     // Create leaderboard columns for the generalized component
-    const getLeaderboardColumns = (): ColumnsType<any> => {
+    const getLeaderboardColumns = (sessionType: string | undefined) => {
+        if (!sessionType) return [];
+
         const generalColumn = [{
             title: 'POS',
             dataIndex: 'position',
@@ -264,11 +267,11 @@ const SessionContent = () => {
             },
         ]
 
-        if (isRace) {
+        if (sessionType === 'Race') {
             return [...generalColumn, ...raceColumn]
-        } else if (isQualifying) {
+        } else if (sessionType === 'Qualifying') {
             return [...generalColumn, ...qualifyingColumn]
-        } else if (isPractice) {
+        } else if (sessionType === 'Practice') {
             return [...generalColumn, ...practiceColumn]
         } else {
             return []
@@ -318,7 +321,7 @@ const SessionContent = () => {
                         <Col span={24}>
                             <Leaderboard
                                 data={sessionResultData}
-                                columns={getLeaderboardColumns()}
+                                columns={getLeaderboardColumns(sessionData[0]?.session_type)}
                                 title="Race Results"
                                 loading={isLoading}
                                 pagination={false}
@@ -365,7 +368,11 @@ const SessionContent = () => {
                             width: '100%'
                         }}>
                         <Col span={24}>
-                            <StintGraph stintData={stintData} driverAcronym={driverAcronym} isLoading={isLoading} />
+                            <StintGraph
+                                stintData={stintData}
+                                driverAcronym={driverAcronym}
+                                isLoading={isLoading}
+                            />
 
 
                         </Col>

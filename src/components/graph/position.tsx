@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { Line, LineConfig, Bar, BarConfig, ColumnConfig } from '@ant-design/plots'
 
 import { Card, Typography } from "antd";
@@ -27,96 +27,141 @@ export const PositionGraph = (props: {
 }) => {
 
 
+    const processedData = useMemo(() => {
 
-    const positionDataSortByDate = props.positionData.sort((a, b) => (dayjs(a.date).isAfter(dayjs(b.date)) ? 1 : -1))
-    const positionDataGroupByDate = positionDataSortByDate ? groupBy(positionDataSortByDate, i => i.date!) : []
-    const lapDataGroupByDriver = groupBy(props.lapData.sort((a, b) => a.lap_number! - b.lap_number!), i => i.driver_number?.toString()!)
+        const positionDataSortByDate = props.positionData.sort((a, b) => (dayjs(a.date).isAfter(dayjs(b.date)) ? 1 : -1))
+        const positionDataGroupByDate = positionDataSortByDate ? groupBy(positionDataSortByDate, i => i.date!) : []
+        const lapDataGroupByDriver = groupBy(props.lapData.sort((a, b) => a.lap_number! - b.lap_number!), i => i.driver_number?.toString()!)
+        const startingGrid = positionDataSortByDate.reduce((obj: StaringGridMap, { driver_number, position }) => {
+            let key = driver_number?.toString()!
+            if (!obj[key]) obj[key] = position!;
+            return obj;
+        }, {});
+        return {
+            positionDataSortByDate: positionDataSortByDate,
+            positionDataGroupByDate: positionDataGroupByDate,
+            lapDataGroupByDriver: lapDataGroupByDriver,
+            startingGrid: startingGrid
 
-    const lastLap = props.lapData[props.lapData.length - 1]?.lap_number
-
-    const GetLapFromDateAndDriverNumber = function (driver_number: string, date: string): number {
-
-        if (lapDataGroupByDriver) {
-            let arr = lapDataGroupByDriver[driver_number]
-
-
-
-            let data = arr?.find((e: LapParams) => e.date_start && dayjs(e.date_start).isAfter(dayjs(date)))
-            return data && data.lap_number ? data.lap_number : -1
-        } else {
-            return -1
         }
-    }
+    }, [props.positionData, props.lapData]);
 
 
 
+    const filterData = useMemo(() => {
+        // Create sorted copies to avoid mutating original arrays
+        const positionDataSortByDate = [...props.positionData].sort((a, b) =>
+            dayjs(a.date).isAfter(dayjs(b.date)) ? 1 : -1
+        );
 
+        const lapDataSortByLapNumber = [...props.lapData].sort((a, b) =>
+            (a.lap_number || 0) - (b.lap_number || 0)
+        );
 
+        // Pre-compute lap data lookup for O(1) access
+        const lapDataGroupByDriver = groupBy(lapDataSortByLapNumber, i => i.driver_number?.toString()!);
 
+        // Create a more efficient lap lookup function
+        const getLapFromDateAndDriverNumber = (driver_number: string, date: string): number => {
+            const driverLaps = lapDataGroupByDriver[driver_number];
+            if (!driverLaps) return -1;
 
-    const startingGrid = positionDataSortByDate.reduce((obj: StaringGridMap, { driver_number, position }) => {
-        let key = driver_number?.toString()!
-        if (!obj[key]) obj[key] = position!;
-        return obj;
-    }, {});
+            // Use binary search for better performance on large datasets
+            let left = 0;
+            let right = driverLaps.length - 1;
+            let result = -1;
 
+            while (left <= right) {
+                const mid = Math.floor((left + right) / 2);
+                const lap = driverLaps[mid];
 
-    //Convert Data for graph
-    let positionMap = { ...startingGrid }
-    let updatedPositionDataArr = []
-    let dateLapMapping = new Map<string, number>()
-    for (const [date, positionDataArr] of Object.entries(positionDataGroupByDate)) {
-
-        //Update Position
-        const session_key = positionDataArr[0].session_key
-        const meeting_key = positionDataArr[0].meeting_key
-
-        for (const data of positionDataArr) {
-            let key = data.driver_number?.toString()!
-            if (key) positionMap[key] = data.position!
-        }
-
-        //Create Position of All Driver at Specfic Date
-        for (const [driver_number, position] of Object.entries(positionMap)) {
-
-            let lap = GetLapFromDateAndDriverNumber(driver_number, date)
-
-            if (position === 1) dateLapMapping.set(date, lap)
-
-
-            updatedPositionDataArr.push(
-                {
-                    "session_key": session_key,
-                    "meeting_key": meeting_key,
-                    "driver_number": driver_number,
-                    "date": date,
-                    "position": position,
-                    "lap_number": lap
+                if (lap.date_start && dayjs(lap.date_start).isAfter(dayjs(date))) {
+                    result = lap.lap_number || -1;
+                    right = mid - 1; // Look for earlier lap
+                } else {
+                    left = mid + 1;
                 }
-            )
+            }
 
+            return result;
+        };
+
+        // Pre-allocate arrays with estimated size for better performance
+        const estimatedSize = positionDataSortByDate.length * 20; // Estimate 20 drivers max
+        const updatedPositionDataArr: any[] = [];
+        updatedPositionDataArr.length = estimatedSize;
+        let dataIndex = 0;
+
+        const dateLapMapping = new Map<string, number>();
+        let positionMap = { ...processedData.startingGrid };
+
+        // Process data more efficiently
+        for (const [date, positionDataArr] of Object.entries(processedData.positionDataGroupByDate)) {
+            const session_key = positionDataArr[0].session_key;
+            const meeting_key = positionDataArr[0].meeting_key;
+
+            // Update position map in batch
+            for (const data of positionDataArr) {
+                const key = data.driver_number?.toString();
+                if (key) positionMap[key] = data.position!;
+            }
+
+            // Create position data for all drivers - avoid nested loops
+            const driverEntries = Object.entries(positionMap);
+            for (let i = 0; i < driverEntries.length; i++) {
+                const [driver_number, position] = driverEntries[i];
+                const lap = getLapFromDateAndDriverNumber(driver_number, date);
+
+                if (position === 1) dateLapMapping.set(date, lap);
+
+                // Direct assignment instead of push for better performance
+                updatedPositionDataArr[dataIndex++] = {
+                    session_key,
+                    meeting_key,
+                    driver_number,
+                    date,
+                    position,
+                    lap_number: lap
+                };
+            }
         }
 
-    }
+        // Trim array to actual size
+        updatedPositionDataArr.length = dataIndex;
 
-    const lastDate = updatedPositionDataArr[updatedPositionDataArr.length - 1].date
-
-    const finishOrder = updatedPositionDataArr.filter(e => e.date === lastDate).sort((a, b) => a.position - b.position)
-
-    const customLegendItem: LegendItem[] = finishOrder.map(i => {
-        let color = props.driverTeamColorMap[parseInt(i.driver_number)]
+        // Optimize finish order calculation
+        const lastDate = updatedPositionDataArr[updatedPositionDataArr.length - 1]?.date;
+        const finishOrder = updatedPositionDataArr
+            .filter(e => e.date === lastDate)
+            .sort((a, b) => a.position - b.position);
 
         return {
-            name: i.driver_number,
-            value: i.position,
-            marker: { symbol: 'circle', style: { fill: `#${color}`, r: 5 } },
-            unchecked: !props.selectedDrivers[parseInt(i.driver_number)]
-        }
-    })
+            updatedPositionDataArr,
+            lastDate,
+            finishOrder
+        };
+    }, [processedData.positionDataGroupByDate, processedData.startingGrid, processedData.lapDataGroupByDriver]);
+
+
+
+
+
+    const customLegendItem: LegendItem[] = useMemo(() => {
+        return filterData.finishOrder.map(i => {
+            let color = props.driverTeamColorMap[parseInt(i.driver_number)]
+
+            return {
+                name: i.driver_number,
+                value: i.position,
+                marker: { symbol: 'circle', style: { fill: `#${color}`, r: 5 } },
+                unchecked: !props.selectedDrivers[parseInt(i.driver_number)]
+            }
+        })
+    }, [filterData.finishOrder, props.driverTeamColorMap, props.selectedDrivers])
 
 
     const config: LineConfig = {
-        data: updatedPositionDataArr,
+        data: filterData.updatedPositionDataArr,
         xField: "date",
         yField: "position",
         isStack: false,
@@ -126,12 +171,9 @@ export const PositionGraph = (props: {
             let color = props.driverTeamColorMap[parseInt(datum.driver_number)]
             return color ? `#${color}` : defaultColor!
         },
-
         yAxis: {
             label: {
                 formatter: (v) => v,
-
-
             },
             title: {
                 text: "位置",
@@ -144,31 +186,12 @@ export const PositionGraph = (props: {
             minLimit: 1,
             max: 20,
             tickCount: 2
-
-
-            // max: props.driverAcronym.length,
-
-            // range: [1, 20]
         },
         xAxis: {
-            // title: {
-            //     text: "圈",
-            //     description: "Lap",
-            //     position: "center",
-            // },
             position: "top",
-            // label: {
-            //     formatter: (v) => dateLapMapping.get(v)
-            // },
             label: null
-
-
-
-
-
         },
         reflect: 'y',
-
         padding: [20, 100, 30, 80],
         legend: {
             position: 'right-top',
@@ -177,16 +200,9 @@ export const PositionGraph = (props: {
                     return props.driverAcronym[text] ? (text + " " + props.driverAcronym[text]) : text
                 }  // 格式化文本函数
             },
-
-
             custom: true,
-
             items: customLegendItem,
             selected: props.selectedDrivers,
-
-
-
-
         },
         tooltip: {
             title: (title: string, datum: Datum) => {

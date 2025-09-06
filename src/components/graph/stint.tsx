@@ -1,5 +1,5 @@
 import { Bar, BarConfig } from '@ant-design/plots';
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useEffect, useState } from "react";
 import { StintParams } from '@/interfaces/openf1';
@@ -16,7 +16,11 @@ import { TooltipItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
 
 
 
-export const StintGraph = (props: { stintData: any, driverAcronym: any, isLoading: boolean }) => {
+export const StintGraph = (props: {
+    stintData: Array<StintParams>,
+    driverAcronym: any,
+    isLoading: boolean
+}) => {
 
 
 
@@ -27,14 +31,26 @@ export const StintGraph = (props: { stintData: any, driverAcronym: any, isLoadin
         "INTERMEDIATE" = "INTERMEDIATE",
         "WET" = "WET"
     }
+    const filterData = useMemo(() => {
 
-    const compoundOrder = Object.values(COMPOUND);
+        return props.stintData
+            .filter((d: any) => d.driver_number !== null
+                && d.driver_number !== undefined
+            )
+            .sort((a: any, b: any) => a.driver_number - b.driver_number)
+            ?.map((d: any) => {
+                return {
+                    ...d,
+                    lapNumber: d.lap_end - d.lap_start + 1,
+                    lapIntervalForDisplay: [d.lap_start - 0.5 < 0 ? 0 : d.lap_start - 0.5, d.lap_end + 0.5]
+                }
+            })
+    }, [props.stintData])
 
+    useEffect(() => {
+        console.log(filterData, filterData?.filter((d: any) => d.driver_number === "1"))
+    }, [filterData])
 
-    const sortedData = props.stintData
-        .filter((d: any) => d.driver_number !== null && d.driver_number !== undefined)
-        .sort((a: any, b: any) => a.driver_number - b.driver_number)
-    // .sort((a: any, b: any) => compoundOrder.indexOf(a.compound) - compoundOrder.indexOf(b.compound))
 
     const typeColorMapping = {
         "SOFT": '#f54842',
@@ -48,69 +64,54 @@ export const StintGraph = (props: { stintData: any, driverAcronym: any, isLoadin
         [key: string]: string | undefined
     }
 
-    const usedStintMap = props?.stintData.reduce((dataSoFar: dataMap, { compound, ...props }: StintParams) => {
-
-        if (!dataSoFar[compound!]) dataSoFar[compound!] = typeColorMapping[compound as keyof typeof typeColorMapping];
-        //driversSoFar[key].push(name_acronym);
-        return dataSoFar;
-    }, {});
-
-
 
 
 
     const config: BarConfig = {
-        data: sortedData,
+        data: filterData,
         yField: 'driver_number',
-        xField: 'lap_interval',
+        xField: 'lapIntervalForDisplay',
         seriesField: 'compound',
         // autoFit: true,
         isStack: false,
 
+        // Add white border styling
+        barStyle: {
+            stroke: '#000',
+            strokeWidth: 1
+        },
         tooltip: {
             title: "Strategy",
             fields: ['driver_number', 'lap_interval', 'compound', 'lap_start'],
             customItems: (originalItems: TooltipItem[]) => {
                 if (originalItems.length > 0) {
-                    let driver_number = originalItems[0].data.driver_number
-                    let data = sortedData.filter((e: any) => e.driver_number === driver_number)
+                    let driver_number = originalItems[0].data.driver_number;
+                    let data = filterData.filter((e: any) => e.driver_number === driver_number);
                     let items = data.map((d: any) => {
-                        let color = typeColorMapping[d.compound as keyof typeof typeColorMapping]
-                        let interval = `Lap ${d.lap_start} - Lap ${d.lap_end}`
+                        let color = typeColorMapping[d.compound as keyof typeof typeColorMapping];
+                        let interval = `Lap ${d.lap_start} - Lap ${d.lap_end}`;
 
                         return {
                             color: color,
                             data: d,
-                            marker: true,
+                            marker: 'circle', // Change from boolean to string
                             title: "Strategy",
                             name: d.compound,
                             value: interval,
-
-                        }
-                    })
-
-
-                    return items
+                            mappingData: d
+                        };
+                    });
+                    return items as TooltipItem[]; // Cast to TooltipItem[]
                 } else {
-                    return originalItems
+                    return originalItems;
                 }
-
             },
-
-
-
-
         },
-
-
         yAxis: {
             label: {
 
                 formatter: (v) => { return `${v} ${props.driverAcronym[v]}` },
             },
-
-
-
         },
         xAxis: {
             title: {
@@ -127,8 +128,6 @@ export const StintGraph = (props: { stintData: any, driverAcronym: any, isLoadin
             type: "legend-filter",
             enable: false,
         }],
-
-
         color: (datum: Datum, defaultColor?: string) => {
             let color = typeColorMapping[datum.compound as keyof typeof typeColorMapping]
             return datum.compound && color ? color : (defaultColor ? defaultColor : '#fff')
