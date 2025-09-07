@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App";
 import { LoadingProvider } from "./context/LoadingContext";
+import { Analytics } from '@vercel/analytics/next';
+
 
 const container = document.getElementById("root");
 // eslint-disable-next-line
@@ -11,6 +13,7 @@ root.render(
   <React.StrictMode>
     <LoadingProvider>
       <App />
+      <Analytics />
     </LoadingProvider>
   </React.StrictMode>,
 );
