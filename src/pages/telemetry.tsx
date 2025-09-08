@@ -106,7 +106,8 @@ const Telemetry: React.FC<TelemetryProps> = ({
                 } else {
                     console.log(`Fetching fresh data for ${driverCode} lap ${lap_number}`);
                     const mode = import.meta.env.MODE as string;
-                    const response = mode === "development" ? await import('@/data/test.json') : await fetchTelemetry(year, grand_prix, session_type, driverCode, lap_number);
+                    // const mode = "production";
+                    const response = mode === "development" ? await import('@/data/telemetry.json') : await fetchTelemetry(year, grand_prix, session_type, driverCode, lap_number);
 
                     if (mode === 'development') {
                         allTelemetryData.push(...response.default.telemetry.data_points);

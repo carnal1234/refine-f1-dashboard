@@ -19,16 +19,27 @@ const SpeedGraph: React.FC<SpeedGraphProps> = ({
     selectedDrivers,
     isLoading
 }) => {
-    // Transform data to ensure proper line separation
-    const processedData = telemetryData?.map(point => ({
-        ...point,
-        // Ensure driver_code is always a string
-        driver_code: String(point.driver_code || 'UNKNOWN'),
-        // Ensure distance is numeric
-        distance: Number(point.distance) || 0,
-        // Ensure speed is numeric
-        speed: Number(point.speed) || 0
-    })) || [];
+    // Transform and sort data to ensure proper overlapping
+    const processedData = React.useMemo(() => {
+        if (!telemetryData || telemetryData.length === 0) return [];
+
+        // Sort all data by distance first, then by driver to ensure proper ordering
+        const sortedData = telemetryData
+            .map(point => ({
+                ...point,
+                driver_number: driverAcronymMap[point.driver_code as string]?.toString(),
+                distance: Number(point.distance) || 0
+            }))
+            .sort((a, b) => {
+                // First sort by distance, then by driver code for consistent ordering
+                if (a.distance !== b.distance) {
+                    return a.distance - b.distance;
+                }
+                return a.driver_code.localeCompare(b.driver_code);
+            });
+
+        return sortedData;
+    }, [telemetryData, driverAcronymMap]);
 
     const lineConfig: LineConfig = {
         data: processedData,
@@ -40,19 +51,39 @@ const SpeedGraph: React.FC<SpeedGraphProps> = ({
         autoFit: true,
         padding: [80, 100, 80, 80],
         smooth: true,
+        connectNulls: false,
+        point: {
+            size: 0,
+            shape: 'circle',
+        },
+        meta: {
+            distance: {
+                type: 'linear',
+                nice: true,
+            },
+            speed: {
+                type: 'linear',
+                nice: true,
+            },
+        },
         color(datum, defaultColor) {
             const driver_code = datum.driver_code
             const driverNum = driverAcronymMap[driver_code as string]
             const driverColor = driverTeamColorMap[driverNum];
             return driverColor ? `#${driverColor}` : (defaultColor || '#666');
         },
-        xAxis: false,
+        xAxis: {
+            type: 'linear',
+            nice: true,
+            label: null,
+            title: null,
+        },
         yAxis: {
             label: { formatter: (v: any) => `${v} km/h` },
             title: {
                 text: "Speed (km/h)",
                 description: "Speed",
-                position: "bottom",
+                position: "left",
                 style: {
                     fontSize: 12,
                     textAlign: 'center',

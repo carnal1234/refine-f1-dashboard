@@ -19,17 +19,29 @@ const DRSGraph: React.FC<DRSGraphProps> = ({
     selectedDrivers,
     isLoading
 }) => {
-    // Transform data to ensure proper line separation
-    const processedData = telemetryData?.map(point => ({
-        ...point,
-        // Ensure driver_code is always a string
-        driver_code: String(point.driver_code || 'UNKNOWN'),
-        // Ensure distance is numeric
-        distance: Number(point.distance) || 0,
-        // Ensure speed is numeric
-        speed: Number(point.speed) || 0,
-        drs: Number(point.drs) > 0 ? 1 : 0
-    })) || [];
+    // Transform and sort data to ensure proper overlapping
+    const processedData = React.useMemo(() => {
+        if (!telemetryData || telemetryData.length === 0) return [];
+
+        // Sort all data by distance first, then by driver to ensure proper ordering
+        const sortedData = telemetryData
+            .map(point => ({
+                ...point,
+                driver_code: String(point.driver_code || 'UNKNOWN'),
+                distance: Number(point.distance) || 0,
+                speed: Number(point.speed) || 0,
+                drs: Number(point.drs) > 0 ? 1 : 0
+            }))
+            .sort((a, b) => {
+                // First sort by distance, then by driver code for consistent ordering
+                if (a.distance !== b.distance) {
+                    return a.distance - b.distance;
+                }
+                return a.driver_code.localeCompare(b.driver_code);
+            });
+
+        return sortedData;
+    }, [telemetryData]);
 
     const lineConfig: LineConfig = {
         data: processedData,
@@ -47,13 +59,18 @@ const DRSGraph: React.FC<DRSGraphProps> = ({
             const driverColor = driverTeamColorMap[driverNum];
             return driverColor ? `#${driverColor}` : (defaultColor || '#666');
         },
-        xAxis: false,
+        xAxis: {
+            type: 'linear',
+            nice: true,
+            label: null,
+            title: null,
+        },
         yAxis: {
             label: { formatter: (v: any) => `${v === 0 ? 'OFF' : 'ON'}` },
             title: {
                 text: "DRS",
                 description: "DRS",
-                position: "bottom",
+                position: "left",
                 style: {
                     fontSize: 12,
                     textAlign: 'center',
@@ -61,6 +78,16 @@ const DRSGraph: React.FC<DRSGraphProps> = ({
                 }
             },
             tickCount: 2,
+        },
+        meta: {
+            distance: {
+                type: 'linear',
+                nice: true,
+            },
+            drs: {
+                type: 'linear',
+                nice: true,
+            },
         },
         interactions: [{
             type: "legend-filter",
