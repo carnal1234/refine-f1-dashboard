@@ -98,7 +98,7 @@ const DRSGraph: React.FC<DRSGraphProps> = ({
             itemName: {
                 formatter: (text: string) => text
             },
-            selected: selectedDrivers,
+            // selected: selectedDrivers,
             marker: {
                 symbol: 'circle',
                 style: {

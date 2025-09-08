@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, Select, Col, Row, Typography, Button, message } from 'antd';
+import { Card, Select, Col, Row, Typography, Button, message, Alert } from 'antd';
 import { DriverParams, LapParams, SessionParams, MeetingParams } from '@/interfaces/openf1';
 import { fetchTelemetry } from '@/services/fastApi';
 import SpeedGraph from '@/components/graph/speedGraph';
@@ -9,6 +9,7 @@ import BrakeGraph from '@/components/graph/brakeGraph';
 import DRSGraph from '@/components/graph/drsGraph';
 import GearGraph from '@/components/graph/gearGraph';
 import RPMGraph from '@/components/graph/rpmGraph';
+import GraphFactory from '@/components/graph/GraphFactory';
 
 const { Title } = Typography;
 
@@ -162,6 +163,16 @@ const Telemetry: React.FC<TelemetryProps> = ({
             }))
     }, [driverAcronymMap, selectedLap])
 
+    const selectedDriversForGraph = useMemo(() => {
+        const drivers: Record<string, boolean> = {};
+
+        selectedDriverCodes.forEach(driverCode => {
+            drivers[driverCode] = true;
+        });
+        return drivers;
+    }, [selectedDriverCodes])
+
+
     // Preload telemetry data for current lap when it changes
     // useEffect(() => {
     //     if (sessionData[0]?.session_key && selectedLap > 0) {
@@ -228,7 +239,19 @@ const Telemetry: React.FC<TelemetryProps> = ({
                 }}
                 bodyStyle={{ padding: '16px 24px' }}
             >
+                <Row justify="center" style={{ marginBottom: 16 }}>
+                    <Col>
+                        <Alert
+                            message="Initial loading of telemetry data may take a while."
+                            type="warning"
+                            style={{ textAlign: 'center' }}
+                        />
+                    </Col>
+                </Row>
+
                 <Row gutter={[16, 16]} align="middle">
+
+
                     <Col>
                         <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
                             📊 Telemetry Analysis
@@ -459,58 +482,14 @@ const Telemetry: React.FC<TelemetryProps> = ({
             </Card>
 
 
-            <SpeedGraph
+            <GraphFactory
                 telemetryData={telemetryData}
                 driverTeamColorMap={driverTeamColorMap}
                 driverAcronymMap={driverAcronymMap}
                 driverData={driverData}
-                selectedDrivers={selectedDrivers}
+                selectedDrivers={selectedDriversForGraph}
                 isLoading={isLoading}
-            />
-
-            <ThrottleGraph
-                telemetryData={telemetryData}
-                driverTeamColorMap={driverTeamColorMap}
-                driverAcronymMap={driverAcronymMap}
-                driverData={driverData}
-                selectedDrivers={selectedDrivers}
-                isLoading={isLoading}
-            />
-
-            <BrakeGraph
-                telemetryData={telemetryData}
-                driverTeamColorMap={driverTeamColorMap}
-                driverAcronymMap={driverAcronymMap}
-                driverData={driverData}
-                selectedDrivers={selectedDrivers}
-                isLoading={isLoading}
-            />
-
-            <RPMGraph
-                telemetryData={telemetryData}
-                driverTeamColorMap={driverTeamColorMap}
-                driverAcronymMap={driverAcronymMap}
-                driverData={driverData}
-                selectedDrivers={selectedDrivers}
-                isLoading={isLoading}
-            />
-
-            <DRSGraph
-                telemetryData={telemetryData}
-                driverTeamColorMap={driverTeamColorMap}
-                driverAcronymMap={driverAcronymMap}
-                driverData={driverData}
-                selectedDrivers={selectedDrivers}
-                isLoading={isLoading}
-            />
-
-            <GearGraph
-                telemetryData={telemetryData}
-                driverTeamColorMap={driverTeamColorMap}
-                driverAcronymMap={driverAcronymMap}
-                driverData={driverData}
-                selectedDrivers={selectedDrivers}
-                isLoading={isLoading}
+            // Optional: enableGraphs={['speed', 'throttle', 'brake']} // Only show specific graphs
             />
 
 
