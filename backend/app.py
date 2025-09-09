@@ -40,7 +40,7 @@ def get_session_data_optimized(year, grand_prix, session_type, load_telemetry=Tr
     
     if load_telemetry:
         print(f"Loading telemetry data for {year} {grand_prix} {session_type}...")
-        session.load(telemetry=True, laps=False, weather=False)
+        session.load(telemetry=True, laps=True, weather=False)
     else:
         print(f"Loading basic session data (no telemetry) for {year} {grand_prix} {session_type}...")
         session.load(telemetry=False, laps=True, weather=False)
