@@ -8,7 +8,7 @@ import { Card, Typography } from "antd";
 import { DriverParams, LapParams, PositionParams, RaceControlParams, SessionParams, StintParams, PitParams, WeatherParams, MeetingParams, SessionResultParams } from "../../interfaces/openf1";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DollarOutlined, FieldTimeOutlined } from "@ant-design/icons";
-import { Text as CustomText } from "../../components/common";
+import { Text as CustomText, StartGrid } from "../../components/common";
 import { Datum } from "@ant-design/charts";
 import { StintGraph } from "../../components/graph/stint";
 import { RacePaceGraph } from "../../components/graph/race-pace";
@@ -333,7 +333,24 @@ const SessionContent = () => {
                         </Col>
                     </Row>
                 </TabPane>
-                <TabPane tab="Race Pace" key="2">
+                {isRace && (<TabPane tab="Starting Grid" key="2">
+                    <Row
+                        gutter={[32, 32]}
+                        style={{
+                            marginTop: '32px',
+                            width: '100%'
+                        }}>
+                        <Col span={24}>
+                            <StartGrid
+                                drivers={driverData}
+                                positionData={positionData}
+                                title="Starting Grid"
+                            />
+                        </Col>
+                    </Row>
+                </TabPane>
+                )}
+                <TabPane tab="Race Pace" key="3">
                     <Row
                         gutter={[32, 32]}
                         style={{
@@ -360,7 +377,7 @@ const SessionContent = () => {
                         </Col>
                     </Row>
                 </TabPane>
-                <TabPane tab="Stint" key="3">
+                <TabPane tab="Strategy" key="4">
                     <Row
                         gutter={[32, 32]}
                         style={{
@@ -378,7 +395,7 @@ const SessionContent = () => {
                         </Col>
                     </Row>
                 </TabPane>
-                {isRace && (<TabPane tab="Position" key="4">
+                {isRace && (<TabPane tab="Position" key="5">
                     <Row
                         gutter={[32, 32]}
                         style={{
