@@ -71,6 +71,8 @@ const SessionContent = () => {
 
     const raceControlRef = useRef<EventCardRef>(null);
 
+    // Add this state to track EventCard collapse
+
     // Load data when session_key or meeting_key changes
     useEffect(() => {
         if (session_key && meeting_key) {
@@ -93,9 +95,6 @@ const SessionContent = () => {
             if (raceControlRef && raceControlRef.current) raceControlRef.current.updateLap(lap_number)
         }
     }
-
-
-
 
     const isRace = sessionData[0]?.session_type === 'Race'
     const isQualifying = sessionData[0]?.session_type === 'Qualifying'
@@ -368,12 +367,11 @@ const SessionContent = () => {
                                 isLoading={isLoading}
                                 selectedDrivers={selectedDrivers}
                                 onToolTipChange={onRacePaceToolTipChange}
+                                sessionResultData={sessionResultData}
                             />
-
                         </Col>
-                        <Col span={6}  >
+                        <Col span={6}>
                             <EventCard dataList={raceControlData} ref={raceControlRef} driverAcronym={driverAcronym} />
-
                         </Col>
                     </Row>
                 </TabPane>

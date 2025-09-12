@@ -1,5 +1,5 @@
 import { useRef, useState, SetStateAction, useCallback, useEffect, useMemo } from 'react'
-import { Line, LineConfig } from '@ant-design/plots'
+import { Line, LineConfig, Violin, ViolinConfig, Column, ColumnConfig, Box, BoxConfig } from '@ant-design/plots'
 
 import { Button, Card, Slider } from "antd";
 import { FieldTimeOutlined } from '@ant-design/icons';
@@ -10,7 +10,7 @@ import { Datum } from "@ant-design/charts";
 import { LegendItem } from '@antv/g2plot/node_modules/@antv/g2/lib/interface'
 import { ListItem } from '@antv/g2plot/node_modules/@antv/component/lib/types'
 
-import { DriverParams, LapParams, RaceControlParams, StintParams, PitParams } from '@/interfaces/openf1';
+import { DriverParams, LapParams, RaceControlParams, StintParams, PitParams, SessionResultParams } from '@/interfaces/openf1';
 
 import { useTelemetry } from "@/context/TelemetryContext";
 
@@ -41,6 +41,7 @@ interface RacePaceGraphProp {
     stintData: Array<StintParams>,
     raceControlData: Array<RaceControlParams>,
     pitData: Array<PitParams>,
+    sessionResultData: Array<SessionResultParams>,
     driverAcronym: any,
     isLoading: boolean,
     selectedDrivers: Record<string, boolean>,
@@ -55,6 +56,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     });
 
     const chartRef = useRef<ChartRef>(null);
+    const violinRef = useRef<ChartRef>(null);
 
     // Memoize callback functions
     const onSliderChange = useCallback((v: SetStateAction<number>) => {
@@ -133,6 +135,31 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         return annotations
     }
 
+    // Create driver finishing position map for sorting
+    const driverFinishingPositions = useMemo(() => {
+        const positionMap = new Map<string, number>();
+
+        props.sessionResultData.forEach(result => {
+            const driverKey = result.driver_number?.toString();
+            if (driverKey) {
+                // Handle DNF/DNS/DSQ cases
+                if (result.position === null || result.position === undefined) {
+                    // For drivers who didn't finish, assign a high position number
+                    // You can also check for DNF, DNS, DSQ flags if available
+                    if (result.dnf || result.dns || result.dsq) {
+                        positionMap.set(driverKey, 999); // Place them at the end
+                    } else {
+                        positionMap.set(driverKey, 999); // Default for null positions
+                    }
+                } else {
+                    positionMap.set(driverKey, result.position);
+                }
+            }
+        });
+
+        return positionMap;
+    }, [props.sessionResultData]);
+
     const processedData = useMemo(() => {
         const driverDataGroupById = props.driverData ? groupBy(props.driverData, i => i.driver_number!) : []
         const stintDataGroupById = props.stintData ? groupBy(props.stintData, i => i.driver_number!) : []
@@ -189,12 +216,48 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         return getSafetyCarAnnotation(props.raceControlData);
     }, [props.raceControlData]);
 
+    const validLapMinMax = useMemo(() => {
+        return CalcMinMax(filteredData.map(x => x.lap_duration));
+    }, [filteredData]);
 
+    // Create violin data with explicit finishing position ordering
+    const violinData = useMemo(() => {
+        // Get unique driver numbers and sort them by finishing position
+        const uniqueDrivers = [...new Set(filteredData.map(d => d.driver_number?.toString()).filter(Boolean))];
 
+        const sortedDrivers = uniqueDrivers.sort((a, b) => {
+            const aPosition = driverFinishingPositions.get(a) || 999;
+            const bPosition = driverFinishingPositions.get(b) || 999;
+            return aPosition - bPosition;
+        });
 
+        console.log('Drivers sorted by finishing position:', sortedDrivers.map((driver, index) => ({
+            position: index + 1,
+            driver,
+            finishPosition: driverFinishingPositions.get(driver),
+            acronym: props.driverAcronym[driver],
+            isDNF: driverFinishingPositions.get(driver) === 999
+        })));
 
+        // Create a mapping of driver to their finishing position
+        const driverToPosition = new Map<string, number>();
+        sortedDrivers.forEach((driver, index) => {
+            driverToPosition.set(driver, index + 1);
+        });
 
+        // Transform the data to include the finishing position
+        return filteredData.map(item => {
+            const driverKey = item.driver_number?.toString();
+            const position = driverToPosition.get(driverKey) || 999;
 
+            return {
+                ...item,
+                finish_order: position, // Use finishing order (1, 2, 3, etc.)
+                driver_display: driverKey,
+                finish_position: driverFinishingPositions.get(driverKey) || 999
+            };
+        });
+    }, [filteredData, driverFinishingPositions, props.driverAcronym]);
 
     //Calculate median 
     function CalcMinMax(someArray: any[]): any {
@@ -212,35 +275,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         return { minValue: minValue, maxValue: maxValue }
     }
 
-
-    // useEffect(() => {
-    //     console.log('Filtered data count:', data.length);
-    //     console.log('Min/Max values:', minMax);
-    //     console.log('Outlier threshold:', state.outlierThreshold);
-    //     console.log('Threshold calculation:', minMax.minValue * (state.outlierThreshold / 100));
-
-    //     // Debug lap number mapping
-    //     const lapNumbers = data.map((d: any) => d.lap_number).sort((a: number, b: number) => a - b);
-    //     console.log('Lap numbers in data:', lapNumbers);
-    //     console.log('Unique lap numbers:', [...new Set(lapNumbers)]);
-
-    //     // Check for gaps in lap numbers
-    //     const gaps = [];
-    //     for (let i = 0; i < lapNumbers.length - 1; i++) {
-    //         if (lapNumbers[i + 1] - lapNumbers[i] > 1) {
-    //             gaps.push(`Gap between ${lapNumbers[i]} and ${lapNumbers[i + 1]}`);
-    //         }
-    //     }
-    //     console.log('Gaps in lap numbers:', gaps);
-
-    //     console.log('Sample data:', data.slice(0, 5));
-    // }, [data, minMax, state.outlierThreshold])
-
-
-
-
-
-
     const itemTemplate = `<li class="g2-tooltip-list-item" data-index={index} style="list-style-type: none; padding: 0px; margin: 12px 0px;">
     <span class="g2-tooltip-marker" style="background: {color}; width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
     <span class="g2-tooltip-name">{name}</span>:
@@ -257,6 +291,7 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         yField: "lap_duration",
         isStack: false,
         seriesField: 'driver_number',
+        height: graphHeight,
         xAxis: {
             type: 'linear',
             label: { formatter: (v) => v },
@@ -332,17 +367,6 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
 
         },
-        // color: (datum: Datum, defaultColor?: string) => {
-
-        //     let driver_no = datum.driver_number
-
-        //     if (driverDataGroupById[driver_no] && driverDataGroupById[driver_no][0].team_colour) {
-        //         return '#' + driverDataGroupById[driver_no][0].team_colour
-        //     }
-
-        //     return defaultColor
-        // }
-
         annotations: getSafetyCarAnnotation(props.raceControlData),
         onReady(chart) {
             chart.on('tooltip:change', (ev: any) => {
@@ -359,6 +383,90 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
         },
 
+    };
+
+    const violinConfig: ViolinConfig = {
+        data: violinData,
+        xField: "finish_order", // Use finishing order
+        yField: "lap_duration",
+        seriesField: "finish_order",
+        yAxis: {
+            type: 'linear',
+            label: { formatter: (v) => formatSecondsToTime(v) },
+            minLimit: state.showOutlier ? Math.round(processedData.minMax.minValue * 0.95) : Math.round(validLapMinMax.minValue * 0.95) ?? null,
+            maxLimit: state.showOutlier ? Math.round(processedData.minMax.maxValue * 1.05) : Math.round(validLapMinMax.maxValue * 1.05) ?? null,
+        },
+        xAxis: {
+            type: 'linear',
+            label: {
+                formatter: (value: number) => {
+                    // Find the driver for this finishing order
+                    const sortedDrivers = [...new Set(filteredData.map(d => d.driver_number?.toString()).filter(Boolean))]
+                        .sort((a, b) => {
+                            const aPos = driverFinishingPositions.get(a) || 999;
+                            const bPos = driverFinishingPositions.get(b) || 999;
+                            return aPos - bPos;
+                        });
+
+                    const driverNumber = sortedDrivers[value - 1] || value.toString();
+                    const acronym = props.driverAcronym[driverNumber] || driverNumber;
+
+                    return acronym;
+                }
+            }
+        },
+        meta: {
+            finish_order: {
+                type: 'linear',
+                range: [0, 1],
+            },
+            high: {
+                formatter: (v) => formatSecondsToTime(v),
+            },
+            low: {
+                formatter: (v) => formatSecondsToTime(v),
+            },
+            q1: {
+                formatter: (v) => formatSecondsToTime(v),
+            },
+            q3: {
+                formatter: (v) => formatSecondsToTime(v),
+            },
+            median: {
+                formatter: (v) => formatSecondsToTime(v),
+            }
+        },
+        tooltip: {
+            title: (title: string, datum: Datum) => {
+                // Get sorted drivers (same logic as xAxis formatter)
+                const sortedDrivers = [...new Set(filteredData.map((d: any) => d.driver_number?.toString()).filter(Boolean))]
+                    .sort((a, b) => {
+                        const aPos = driverFinishingPositions.get(a) || 999;
+                        const bPos = driverFinishingPositions.get(b) || 999;
+                        return aPos - bPos;
+                    });
+
+                // Get the finish_order from datum
+                const finishOrder = datum.finish_order;
+                if (finishOrder && sortedDrivers[finishOrder - 1]) {
+                    const driverNumber = sortedDrivers[finishOrder - 1];
+                    const acronym = props.driverAcronym[driverNumber] || '';
+                    const finishPosition = driverFinishingPositions.get(driverNumber) || 999;
+
+                    // Check if driver didn't finish (DNF, DNS, DSQ or position 999)
+                    const isDNF = finishPosition === 999;
+                    const dnfIndicator = isDNF ? ' (DNF)' : '';
+
+                    return `${driverNumber} ${acronym}${dnfIndicator}`.trim();
+                }
+
+                return 'Driver Stats';
+            },
+            fields: ['high', 'low', 'q1', 'q3', 'median'],
+        },
+        theme: 'dark',
+        autoFit: true,
+        legend: false
     };
 
     if (state.error) {
@@ -407,7 +515,10 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
                     <Spin size="large" />
                 </Flex>
             ) : (
-                <Line {...lineConfig} height={graphHeight} ref={chartRef} />
+                <>
+                    <Line {...lineConfig} height={graphHeight} ref={chartRef} />
+                    <Violin {...violinConfig} height={600} ref={violinRef} />
+                </>
             )}
         </Card>
     );
@@ -424,11 +535,9 @@ RacePaceGraph.propTypes = {
     stintData: PropTypes.array.isRequired,
     raceControlData: PropTypes.array.isRequired,
     pitData: PropTypes.array.isRequired,
+    sessionResultData: PropTypes.array.isRequired,
     driverAcronym: PropTypes.object.isRequired,
     isLoading: PropTypes.bool.isRequired,
     selectedDrivers: PropTypes.object.isRequired,
     onToolTipChange: PropTypes.func.isRequired
 };
-
-
-
