@@ -217,21 +217,21 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
     }, [props.raceControlData]);
 
     const validLapMinMax = useMemo(() => {
-        return CalcMinMax(filteredData.map(x => x.lap_duration));
+        return CalcMinMax(filteredData.map((x: any) => x.lap_duration));
     }, [filteredData]);
 
     // Create violin data with explicit finishing position ordering
     const violinData = useMemo(() => {
         // Get unique driver numbers and sort them by finishing position
-        const uniqueDrivers = [...new Set(filteredData.map(d => d.driver_number?.toString()).filter(Boolean))];
+        const uniqueDrivers: string[] = [...new Set(filteredData.map((d: any) => d.driver_number?.toString()).filter(Boolean) as string[])];
 
-        const sortedDrivers = uniqueDrivers.sort((a, b) => {
+        const sortedDrivers: string[] = uniqueDrivers.sort((a: string, b: string) => {
             const aPosition = driverFinishingPositions.get(a) || 999;
             const bPosition = driverFinishingPositions.get(b) || 999;
             return aPosition - bPosition;
         });
 
-        console.log('Drivers sorted by finishing position:', sortedDrivers.map((driver, index) => ({
+        console.log('Drivers sorted by finishing position:', sortedDrivers.map((driver: string, index: number) => ({
             position: index + 1,
             driver,
             finishPosition: driverFinishingPositions.get(driver),
@@ -241,12 +241,12 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
 
         // Create a mapping of driver to their finishing position
         const driverToPosition = new Map<string, number>();
-        sortedDrivers.forEach((driver, index) => {
+        sortedDrivers.forEach((driver: string, index: number) => {
             driverToPosition.set(driver, index + 1);
         });
 
         // Transform the data to include the finishing position
-        return filteredData.map(item => {
+        return filteredData.map((item: any) => {
             const driverKey = item.driver_number?.toString();
             const position = driverToPosition.get(driverKey) || 999;
 
@@ -399,10 +399,11 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         xAxis: {
             type: 'linear',
             label: {
-                formatter: (value: number) => {
+                formatter: (text: string) => {
+                    const value = parseInt(text);
                     // Find the driver for this finishing order
-                    const sortedDrivers = [...new Set(filteredData.map(d => d.driver_number?.toString()).filter(Boolean))]
-                        .sort((a, b) => {
+                    const sortedDrivers: string[] = [...new Set(filteredData.map((d: any) => d.driver_number?.toString()).filter(Boolean) as string[])]
+                        .sort((a: string, b: string) => {
                             const aPos = driverFinishingPositions.get(a) || 999;
                             const bPos = driverFinishingPositions.get(b) || 999;
                             return aPos - bPos;
@@ -439,8 +440,8 @@ export const RacePaceGraph = (props: RacePaceGraphProp) => {
         tooltip: {
             title: (title: string, datum: Datum) => {
                 // Get sorted drivers (same logic as xAxis formatter)
-                const sortedDrivers = [...new Set(filteredData.map((d: any) => d.driver_number?.toString()).filter(Boolean))]
-                    .sort((a, b) => {
+                const sortedDrivers: string[] = [...new Set(filteredData.map((d: any) => d.driver_number?.toString()).filter(Boolean) as string[])]
+                    .sort((a: string, b: string) => {
                         const aPos = driverFinishingPositions.get(a) || 999;
                         const bPos = driverFinishingPositions.get(b) || 999;
                         return aPos - bPos;
