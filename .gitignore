@@ -146,3 +146,6 @@ dmypy.json
 
 #Cache
 */cache/*
+
+#FastF1
+*/fastf1/*

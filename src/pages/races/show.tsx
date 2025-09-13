@@ -413,7 +413,7 @@ const SessionContent = () => {
                     </Row>
                 </TabPane>
                 )}
-                <TabPane tab="Telemetry" key="5">
+                <TabPane tab="Telemetry" key="6">
                     <Row
                         gutter={[32, 32]}
                         style={{
